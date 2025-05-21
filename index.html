@@ -1,0 +1,4441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PV080 Drill</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.0/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+  <style>
+    body {
+      background-color: #f8f9fa;
+      padding-top: 20px;
+    }
+    .card {
+      border-radius: 15px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .card-header {
+      background-color: #3c6e71;
+      color: white;
+      border-radius: 15px 15px 0 0 !important;
+      padding: 15px;
+    }
+    .flashcard-container {
+      min-height: 400px;
+    }
+    .answer-option {
+      border: 2px solid #dee2e6;
+      padding: 15px;
+      margin-bottom: 10px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .answer-option:hover {
+      border-color: #6c757d;
+      background-color: #f1f1f1;
+    }
+    .answer-option.selected {
+      border-color: #3c6e71;
+      background-color: #edf6f9;
+    }
+    .answer-option.correct {
+      border-color: #198754;
+      background-color: #d1e7dd;
+    }
+    .answer-option.incorrect {
+      border-color: #dc3545;
+      background-color: #f8d7da;
+    }
+    .stats-card {
+      background-color: #edf6f9;
+    }
+    .progress {
+      height: 10px;
+    }
+    #submit-btn {
+      background-color: #3c6e71;
+      border-color: #3c6e71;
+    }
+    #submit-btn:hover {
+      background-color: #335c67;
+      border-color: #335c67;
+    }
+    .progress-bar {
+      background-color: #3c6e71;
+    }
+    #stats-container .card {
+      transition: all 0.3s;
+    }
+    #stats-container .card:hover {
+      transform: translateY(-5px);
+    }
+    .chart-container {
+      height: 200px;
+      position: relative;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="row mb-4">
+      <div class="col-12">
+        <h1 class="text-center">PV080 Drill</h1>
+        <p class="text-center text-muted">Master your knowledge with these flashcards</p>
+      </div>
+    </div>
+    
+    <div class="row">
+      <!-- Main flashcard column -->
+      <div class="col-lg-8 mb-4">
+        <div class="card flashcard-container">
+          <div class="card-header">
+            <div class="d-flex justify-content-between align-items-center">
+              <span>Question <span id="current-question">1</span> of <span id="total-questions">0</span></span>
+              <span id="question-difficulty" class="badge bg-primary">Difficulty: New</span>
+            </div>
+          </div>
+          <div class="card-body">
+            <h5 class="card-title mb-4" id="question-text">Loading questions...</h5>
+            <div id="answers-container">
+              <!-- Answers will be dynamically inserted here -->
+            </div>
+          </div>
+          <div class="card-footer">
+            <div class="d-flex justify-content-between align-items-center">
+              <span class="text-muted" id="feedback-text"></span>
+              <button id="submit-btn" class="btn btn-primary">Submit</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Stats column -->
+      <div class="col-lg-4">
+        <div id="stats-container">
+          <div class="card mb-3 stats-card">
+            <div class="card-body">
+              <h5 class="card-title">Progress</h5>
+              <div class="progress mb-2">
+                <div id="progress-bar" class="progress-bar" role="progressbar" style="width: 0%"></div>
+              </div>
+              <div class="d-flex justify-content-between">
+                <small><span id="cards-seen">0</span> seen</small>
+                <small><span id="cards-total">0</span> total</small>
+              </div>
+            </div>
+          </div>
+          
+          <div class="card mb-3 stats-card">
+            <div class="card-body">
+              <h5 class="card-title">Performance</h5>
+              <div class="row text-center">
+                <div class="col-4">
+                  <h2 id="correct-percent">0%</h2>
+                  <small>Correct</small>
+                </div>
+                <div class="col-4">
+                  <h2 id="total-attempts">0</h2>
+                  <small>Attempts</small>
+                </div>
+                <div class="col-4">
+                  <h2 id="current-streak">0</h2>
+                  <small>Streak</small>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="card stats-card">
+            <div class="card-body">
+              <h5 class="card-title">Mastery</h5>
+              <div class="chart-container">
+                <canvas id="mastery-chart"></canvas>
+              </div>
+              <div class="mt-3">
+                <div class="d-flex justify-content-between mb-1">
+                  <small>New</small>
+                  <small><span id="mastery-new">0</span></small>
+                </div>
+                <div class="progress mb-2">
+                  <div id="mastery-new-bar" class="progress-bar bg-info" role="progressbar" style="width: 0%"></div>
+                </div>
+                <div class="d-flex justify-content-between mb-1">
+                  <small>Learning</small>
+                  <small><span id="mastery-learning">0</span></small>
+                </div>
+                <div class="progress mb-2">
+                  <div id="mastery-learning-bar" class="progress-bar bg-warning" role="progressbar" style="width: 0%"></div>
+                </div>
+                <div class="d-flex justify-content-between mb-1">
+                  <small>Mastered</small>
+                  <small><span id="mastery-mastered">0</span></small>
+                </div>
+                <div class="progress">
+                  <div id="mastery-mastered-bar" class="progress-bar bg-success" role="progressbar" style="width: 0%"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="row mt-4">
+      <div class="col-12">
+        <div class="d-flex justify-content-end">
+          <button id="reset-btn" class="btn btn-outline-danger">Reset Progress</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+  <script>
+    $(document).ready(function() {
+      // Define main variables
+      let questions = [];
+      let currentQuestionIndex = 0;
+      let selectedAnswers = [];
+      let stats = loadStats();
+      let chart = null;
+      
+      // Load questions from JSON
+      const questionsData = [
+  {
+    "name": "What is an \"originally non-public\" pseudonym?",
+    "answers": [
+      {
+        "body": "A pseudonym that was not originally public, but in some cases may be disclosed.",
+        "right": true
+      },
+      {
+        "body": "A pseudonym that must be disclosed after its second use.",
+        "right": false
+      },
+      {
+        "body": "A pseudonym originally not intended for the public, which, however, was not approved by the Office for Personal Data Protection.",
+        "right": false
+      },
+      {
+        "body": "A pseudonym that must be disclosed upon its second use.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "Secure methods of client authentication to a bank in an internet banking system include proving oneself with",
+    "answers": [
+      {
+        "body": "a personal key stored securely on a chip card, USB flash drive, or SD card.",
+        "right": true
+      },
+      {
+        "body": "a code obtained by entering a personal identification number or user password into an authentication \"calculator\".",
+        "right": false
+      },
+      {
+        "body": "a personal identification number.",
+        "right": false
+      },
+      {
+        "body": "a password chosen by the client when opening the account.",
+        "right": false
+      },
+      {
+        "body": "a code obtained by entering a challenge from the banking system into an authentication \"calculator\".",
+        "right": true
+      }
+    ]
+  },
+  {
+    "name": "A digital signature in PGP is performed by",
+    "answers": [
+      {
+        "body": "creating a hash of the message, which is signed with the recipient's public key.",
+        "right": false
+      },
+      {
+        "body": "the message being signed directly with a key chosen by the user.",
+        "right": false
+      },
+      {
+        "body": "creating a hash of the message, which is signed with the sender's public key.",
+        "right": false
+      },
+      {
+        "body": "creating a hash of the message, which is signed with the sender's private key.",
+        "right": true
+      },
+      {
+        "body": "creating a hash of the message, which is signed with the recipient's private key.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "Authentication in general",
+    "answers": [
+      {
+        "body": "can sometimes be performed by a person independently (without the help of a computer or chip card).",
+        "right": true
+      },
+      {
+        "body": "can sometimes be performed by a computer or chip card automatically (without human assistance).",
+        "right": true
+      },
+      {
+        "body": "must always be performed by a computer or chip card in cooperation with a person (the computer or card alone is not sufficient).",
+        "right": false
+      },
+      {
+        "body": "must always be performed by a person in cooperation with a computer or chip card (the person alone is not sufficient).",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "What risks are associated with sending payment cards and PINs by mail?",
+    "answers": [
+      {
+        "body": "Any payment card can be easily copied through an intact envelope.",
+        "right": false
+      },
+      {
+        "body": "A postal envelope can be lost during delivery.",
+        "right": true
+      },
+      {
+        "body": "A PIN can be read unnoticed through an intact envelope.",
+        "right": true
+      },
+      {
+        "body": "A payment card is exposed to so-called voltage and temperature attacks through the envelope.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "Denial of Service is",
+    "answers": [
+      {
+        "body": "an attack where processing a request on a web server inevitably ends with an HTTP 500 error.",
+        "right": false
+      },
+      {
+        "body": "an attack that puts a server into a state where it is unable to respond to requests.",
+        "right": true
+      },
+      {
+        "body": "a state where the server detects an attack in time and denies further communication with the attacker.",
+        "right": false
+      },
+      {
+        "body": "a state where the server detects insufficient user authorization for an operation.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "Proxy servers on the Internet are",
+    "answers": [
+      {
+        "body": "unnecessary, they only slow down data speed and are easily exploitable.",
+        "right": false
+      },
+      {
+        "body": "often a way to bypass local security policy.",
+        "right": true
+      },
+      {
+        "body": "the source of all evil, they should be banned.",
+        "right": false
+      },
+      {
+        "body": "a guaranteed means of anonymously using Internet resources.",
+        "right": false
+      },
+      {
+        "body": "important, they understand application protocols, and enable anonymization.",
+        "right": true
+      }
+    ]
+  },
+  {
+    "name": "Which of the following options contain only relevant security functions for systems protecting information privacy?",
+    "answers": [
+      {
+        "body": "unlinkability, unobservability, anonymity, pseudonymity, identity.",
+        "right": false
+      },
+      {
+        "body": "identity, unobservability, anonymity, pseudonymity.",
+        "right": false
+      },
+      {
+        "body": "undetectability, unlinkability, anonymity, pseudonymity.",
+        "right": false
+      },
+      {
+        "body": "unlinkability, unobservability, anonymity, pseudonymity.",
+        "right": true
+      }
+    ]
+  },
+  {
+    "name": "What are the basic characteristics of quantitative risk analysis?",
+    "answers": [
+      {
+        "body": "The output is incomprehensible.",
+        "right": false
+      },
+      {
+        "body": "The output is in a specific value, e.g., a certain amount of money.",
+        "right": true
+      },
+      {
+        "body": "The output is easily understandable.",
+        "right": true
+      },
+      {
+        "body": "The procedure is fully automatable.",
+        "right": false
+      },
+      {
+        "body": "The output is not in a specific value, e.g., a certain amount of money.",
+        "right": false
+      },
+      {
+        "body": "The procedure is not automatable.",
+        "right": true
+      }
+    ]
+  },
+  {
+    "name": "What are the basic characteristics of qualitative risk analysis?",
+    "answers": [
+      {
+        "body": "The output is incomprehensible.",
+        "right": true
+      },
+      {
+        "body": "The output is in a specific value, e.g., a certain amount of money.",
+        "right": false
+      },
+      {
+        "body": "The procedure is largely automatable.",
+        "right": true
+      },
+      {
+        "body": "The output is easily understandable.",
+        "right": false
+      },
+      {
+        "body": "The output is not in a specific value, e.g., a certain amount of money.",
+        "right": true
+      },
+      {
+        "body": "The procedure is not automatable.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "A chip credit card without a magnetic stripe",
+    "answers": [
+      {
+        "body": "usually does not contain a processor, although it is traditionally called a \"chip card\".",
+        "right": false
+      },
+      {
+        "body": "usually offers higher security than a card with a magnetic stripe (without a chip).",
+        "right": true
+      },
+      {
+        "body": "usually contains a small processor.",
+        "right": true
+      },
+      {
+        "body": "usually offers lower security than a card with a magnetic stripe (without a chip).",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "When signing with message recovery, the following applies:",
+    "answers": [
+      {
+        "body": "The signed data can be recovered from the signature with knowledge of the private key.",
+        "right": false
+      },
+      {
+        "body": "The signed data is not part of the signature; it must be recovered via an independent communication channel.",
+        "right": false
+      },
+      {
+        "body": "The signed data can be recovered by anyone who possesses the corresponding public key.",
+        "right": true
+      },
+      {
+        "body": "The signature also contains the signed data.",
+        "right": true
+      }
+    ]
+  },
+  {
+    "name": "Which of the following statements are true:",
+    "answers": [
+      {
+        "body": "integrity guarantees confidentiality.",
+        "right": false
+      },
+      {
+        "body": "confidentiality guarantees integrity.",
+        "right": false
+      },
+      {
+        "body": "neither statement is true.",
+        "right": true
+      },
+      {
+        "body": "strong integrity guarantees confidentiality.",
+        "right": false
+      },
+      {
+        "body": "accountability requires confidentiality.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "Does TOR provide integrity testing for transmitted data?",
+    "answers": [
+      {
+        "body": "No, why would we need something like that, guaranteed anonymity is enough.",
+        "right": false
+      },
+      {
+        "body": "Yes, it's a defense against tagging attacks.",
+        "right": true
+      },
+      {
+        "body": "Yes, it's an improvement over the original design of Onion Routing systems.",
+        "right": true
+      },
+      {
+        "body": "Yes, it's a defense against man-in-the-middle attacks.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "What are among the goals of a security policy?",
+    "answers": [
+      {
+        "body": "Identify the company's protected assets.",
+        "right": false
+      },
+      {
+        "body": "Transfer responsibility to third parties.",
+        "right": false
+      },
+      {
+        "body": "Eliminate all attackers.",
+        "right": false
+      },
+      {
+        "body": "Minimization (control) of risks.",
+        "right": true
+      },
+      {
+        "body": "Establishing a strategy for the use of security functions.",
+        "right": true
+      }
+    ]
+  },
+  {
+    "name": "Because the GSM standard contained security flaws,",
+    "answers": [
+      {
+        "body": "the 3GSM protocol was designed.",
+        "right": true
+      },
+      {
+        "body": "some countries started using GSM encryption for SMS messages (voice data is already difficult to process).",
+        "right": false
+      },
+      {
+        "body": "some countries started using GSM encryption for voice transmissions and SMS messages.",
+        "right": false
+      },
+      {
+        "body": "the 4GSM protocol was designed, in which encryption is done with a new symmetric cipher SHA-3.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "In the case where dissatisfied users are a \"lesser evil\" than unauthorized users, we set the biometric system to have FAR (False Acceptance Rate) and FRR (False Rejection Rate):",
+    "answers": [
+      {
+        "body": "a low FRR value and a low FAR value.",
+        "right": false
+      },
+      {
+        "body": "a high FRR value and a high FAR value.",
+        "right": false
+      },
+      {
+        "body": "a high FRR value and a low FAR value.",
+        "right": true
+      },
+      {
+        "body": "a high FAR value and a low FRR value.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "The Act on Personal Data Protection:",
+    "answers": [
+      {
+        "body": "does not apply to the processing of personal data carried out by a natural person exclusively for personal consumption.",
+        "right": true
+      },
+      {
+        "body": "applies to all processing of personal data, whether it occurs automatically or by other means.",
+        "right": true
+      },
+      {
+        "body": "does not apply to the accidental collection of personal data, if this data is not further processed, or if it is not for business purposes.",
+        "right": true
+      },
+      {
+        "body": "applies to the security of processed personal data in the case of automated means supplied from countries outside the EU.",
+        "right": false
+      },
+      {
+        "body": "does not apply to data voluntarily provided to state institutions.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "By symmetric cryptography, we mean:",
+    "answers": [
+      {
+        "body": "Cryptography using the same key for both encryption and decryption.",
+        "right": true
+      },
+      {
+        "body": "Cryptography with an algorithm whose all operations satisfy the mathematical property of symmetry over a given group.",
+        "right": false
+      },
+      {
+        "body": "Cryptography with an algorithm that allows anyone to symmetrically verify the authenticity of a signature.",
+        "right": false
+      },
+      {
+        "body": "Cryptography using a key that is symmetric at the binary level.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "An Intrusion Detection System (IDS)",
+    "answers": [
+      {
+        "body": "can be used either on a network or on a computer.",
+        "right": false
+      },
+      {
+        "body": "can be used both on a network and on a computer.",
+        "right": true
+      },
+      {
+        "body": "provides better protection than a firewall.",
+        "right": false
+      },
+      {
+        "body": "makes sense to use only as a network element, when it detects and informs about an ongoing attack.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "The error rate of biometric systems expressed by FAR (False Acceptance Rate) is:",
+    "answers": [
+      {
+        "body": "The ratio of the number of unsuccessfully attempted frauds to the number of successfully attempted logins to the system.",
+        "right": false
+      },
+      {
+        "body": "The ratio of the number of successfully attempted frauds to the total number of attempted frauds.",
+        "right": false
+      },
+      {
+        "body": "The ratio of the number of successfully attempted frauds to the total number of attempted logins to the system.",
+        "right": true
+      },
+      {
+        "body": "The ratio of the number of unsuccessfully attempted frauds to the total number of attempted frauds.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "The error rate of biometric systems expressed by FTE (Fail to Enroll) is:",
+    "answers": [
+      {
+        "body": "The ratio of the number of users the system registered in more than one attempt to the total number of system users.",
+        "right": false
+      },
+      {
+        "body": "The ratio of the number of users the system did not verify to the total number of user login attempts to the system.",
+        "right": false
+      },
+      {
+        "body": "The ratio of the number of users the system registered to the number of system users the system did not register.",
+        "right": false
+      },
+      {
+        "body": "None of these answers are correct.",
+        "right": true
+      }
+    ]
+  },
+  {
+    "name": "The error rate of biometric systems expressed by FRR (False Rejection Rate) is:",
+    "answers": [
+      {
+        "body": "The ratio of the number of accepted login attempts by legitimate users to the number of rejected login attempts by legitimate users.",
+        "right": false
+      },
+      {
+        "body": "The ratio of the total number of login attempts by both legitimate and illegitimate users to the total number of login attempts by legitimate users.",
+        "right": false
+      },
+      {
+        "body": "The ratio of the number of accepted login attempts by legitimate users to the total number of verification attempts by legitimate users.",
+        "right": false
+      },
+      {
+        "body": "The ratio of the number of rejected login attempts by legitimate users to the total number of login attempts.",
+        "right": true
+      }
+    ]
+  },
+  {
+    "name": "A digital signature ensures",
+    "answers": [
+      {
+        "body": "Compression of the signed data.",
+        "right": false
+      },
+      {
+        "body": "Validity of the signed data.",
+        "right": false
+      },
+      {
+        "body": "Confidentiality of the signed data.",
+        "right": false
+      },
+      {
+        "body": "Authentication of the signed data.",
+        "right": true
+      }
+    ]
+  },
+  {
+    "name": "A digital signature ensures",
+    "answers": [
+      {
+        "body": "Integrity of the signed data.",
+        "right": true
+      },
+      {
+        "body": "Recovery of the private key in case of its loss.",
+        "right": false
+      },
+      {
+        "body": "Confidentiality of the signed data.",
+        "right": false
+      },
+      {
+        "body": "Authorization of the signed data.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "If a hash function has the property of strong collision resistance, it means that:",
+    "answers": [
+      {
+        "body": "It is impossible to find two different inputs such that the resulting hashes for both inputs are the same.",
+        "right": false
+      },
+      {
+        "body": "It is computationally infeasible to find another input for a given input such that the resulting hashes for both inputs are the same.",
+        "right": false
+      },
+      {
+        "body": "It is computationally infeasible to find any two different inputs such that the resulting hashes for both inputs are the same.",
+        "right": true
+      },
+      {
+        "body": "It is impossible to find two different inputs such that the resulting hashes for both inputs are the same in at least 1/2 of the positions.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "If a hash function has the property of weak collision resistance, it means that:",
+    "answers": [
+      {
+        "body": "It is impossible to find two different inputs such that the resulting hashes for both inputs are the same in at least 1/2 of the positions.",
+        "right": false
+      },
+      {
+        "body": "It is computationally infeasible to find another input for a given input such that the resulting hashes for both inputs are the same.",
+        "right": true
+      },
+      {
+        "body": "It is impossible to find two different inputs such that the resulting hashes for both inputs are the same.",
+        "right": false
+      },
+      {
+        "body": "It is computationally infeasible to find any two different inputs such that the resulting hashes for both inputs are the same.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "Which of the following terms relate to the Common Criteria (CC)?",
+    "answers": [
+      {
+        "body": "Subject of Evaluation (SOE)",
+        "right": false
+      },
+      {
+        "body": "Protection Profile (PP)",
+        "right": true
+      },
+      {
+        "body": "Network Security Target (NST)",
+        "right": false
+      },
+      {
+        "body": "Target of Evaluation (TOE)",
+        "right": true
+      },
+      {
+        "body": "Security Target (ST)",
+        "right": true
+      },
+      {
+        "body": "Provable Protection Profile (PPP)",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "Sensitive personal data according to Czech legislation reveal information about:",
+    "answers": [
+      {
+        "body": "health status.",
+        "right": true
+      },
+      {
+        "body": "attitude towards criminal activity of family members.",
+        "right": false
+      },
+      {
+        "body": "financial circumstances of state officials.",
+        "right": false
+      },
+      {
+        "body": "sexual orientation.",
+        "right": true
+      }
+    ]
+  },
+  {
+    "name": "Basic methods of user authentication are based on something that",
+    "answers": [
+      {
+        "body": "I know.",
+        "right": true
+      },
+      {
+        "body": "I am allowed.",
+        "right": false
+      },
+      {
+        "body": "I have.",
+        "right": true
+      }
+    ]
+  },
+  {
+    "name": "For what reason is it recommended to sign one's own public key with a private key:",
+    "answers": [
+      {
+        "body": "to increase the entropy of the public key.",
+        "right": false
+      },
+      {
+        "body": "to ensure its integrity.",
+        "right": true
+      },
+      {
+        "body": "it is not recommended.",
+        "right": false
+      },
+      {
+        "body": "to increase its trustworthiness by a higher number of signatures.",
+        "right": false
+      },
+      {
+        "body": "to align the length of the public key to a value divisible by the length of the public modulus.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "In the case of unobservability, what is the protected value?",
+    "answers": [
+      {
+        "body": "Information about exceeding the allocated processor time for using offered resources and services.",
+        "right": false
+      },
+      {
+        "body": "Information about logged-in users.",
+        "right": false
+      },
+      {
+        "body": "Information about the use of resources and services.",
+        "right": true
+      },
+      {
+        "body": "Information about applied system security measures (e.g., firewall rule settings).",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "Compared to general OR (Onion Routing) networks, TOR additionally brings",
+    "answers": [
+      {
+        "body": "provides near real-time anonymous connections for various services.",
+        "right": false
+      },
+      {
+        "body": "support for data encryption with a stream cipher using a symmetric key.",
+        "right": false
+      },
+      {
+        "body": "directory servers with information about individual routers.",
+        "right": true
+      },
+      {
+        "body": "support for hidden services and rendezvous points.",
+        "right": true
+      }
+    ]
+  },
+  {
+    "name": "Which of the following statements are true?",
+    "answers": [
+      {
+        "body": "Symmetric cryptography is used only for encryption, while asymmetric cryptography is used only for signing.",
+        "right": false
+      },
+      {
+        "body": "If we want to use asymmetric cryptography for encryption, both keys must remain secret.",
+        "right": false
+      },
+      {
+        "body": "Theoretically, asymmetric cryptography can also be used for encryption, but it is not used in practice.",
+        "right": false
+      },
+      {
+        "body": "Symmetric cryptography uses one key shared between two or more users.",
+        "right": true
+      }
+    ]
+  },
+  {
+    "name": "What is inference?",
+    "answers": [
+      {
+        "body": "Through inference, we gain indirect access to information without direct access to the data representing that information.",
+        "right": true
+      },
+      {
+        "body": "Deriving new information with the same sensitivity by processing and analyzing a group of information of a certain sensitivity.",
+        "right": false
+      },
+      {
+        "body": "The opposite of aggregation.",
+        "right": false
+      },
+      {
+        "body": "Deriving information of higher sensitivity by processing and analyzing a group of information of lower sensitivity.",
+        "right": true
+      },
+      {
+        "body": "Deriving new information with lower sensitivity by processing and analyzing a group of information of higher sensitivity.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "By data availability, we mean",
+    "answers": [
+      {
+        "body": "Data should be available even to an unauthorized person in case of a critical event.",
+        "right": false
+      },
+      {
+        "body": "The process of authenticating a person to work with data and services should be accessible even to people with reduced work capacity.",
+        "right": false
+      },
+      {
+        "body": "Users should have access to data and services with as little complication as possible.",
+        "right": false
+      },
+      {
+        "body": "Authorized users should have access to data and services with as little complication as possible.",
+        "right": true
+      }
+    ]
+  },
+  {
+    "name": "Systems that change the flow and occurrence of data on a communication channel are called",
+    "answers": [
+      {
+        "body": "mixes.",
+        "right": true
+      },
+      {
+        "body": "anonymous (systems).",
+        "right": true
+      },
+      {
+        "body": "mutexes.",
+        "right": false
+      },
+      {
+        "body": "minixes.",
+        "right": false
+      },
+      {
+        "body": "minmaxes.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "Security policy includes",
+    "answers": [
+      {
+        "body": "Specification of technological measures by which the company's security requirements will be enforced.",
+        "right": false
+      },
+      {
+        "body": "A list of specific individuals who are permitted to access the company's sensitive data.",
+        "right": false
+      },
+      {
+        "body": "Requirements, rules, and procedures determining the manner of protection and handling of the company's assets.",
+        "right": true
+      }
+    ]
+  },
+  {
+    "name": "SSL/TLS protocols",
+    "answers": [
+      {
+        "body": "are not easy to integrate into existing applications.",
+        "right": false
+      },
+      {
+        "body": "behave transparently to application layer protocols of the OSI model.",
+        "right": true
+      },
+      {
+        "body": "are not suitable for use in older operating systems for 32-bit processors.",
+        "right": false
+      },
+      {
+        "body": "do not represent increased demands on the computing power of communicating parties.",
+        "right": false
+      },
+      {
+        "body": "require ensuring a suitable (cryptographic) key management system.",
+        "right": true
+      }
+    ]
+  },
+  {
+    "name": "Basic methods of user authentication are based on something that",
+    "answers": [
+      {
+        "body": "cannot be easily destroyed.",
+        "right": false
+      },
+      {
+        "body": "I know.",
+        "right": true
+      },
+      {
+        "body": "I am.",
+        "right": true
+      }
+    ]
+  },
+  {
+    "name": "What is a perturbation technique used in statistical databases?",
+    "answers": [
+      {
+        "body": "No such technique exists.",
+        "right": false
+      },
+      {
+        "body": "No more records than the specified maximum (perturbation) limit may be used to evaluate a query.",
+        "right": false
+      },
+      {
+        "body": "A technique based, for example, on rounding intermediate query results.",
+        "right": true
+      },
+      {
+        "body": "A technique that allows obtaining consistent, but not reliable, answers to a series of similar queries.",
+        "right": true
+      },
+      {
+        "body": "Adding pseudo-random \"noise\" to the set of records based on which a query is evaluated.",
+        "right": true
+      }
+    ]
+  },
+  {
+    "name": "Which of these statements are correct?",
+    "answers": [
+      {
+        "body": "Increasing FAR increases FRR.",
+        "right": false
+      },
+      {
+        "body": "Decreasing FAR increases FRR.",
+        "right": true
+      },
+      {
+        "body": "Increasing FAR (False Acceptance Rate) decreases FRR (False Rejection Rate).",
+        "right": true
+      },
+      {
+        "body": "Decreasing FAR decreases FRR.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "What is the result of evaluating a system according to the Common Criteria (CC)?",
+    "answers": [
+      {
+        "body": "A description of how the given properties are achieved in the evaluated system.",
+        "right": false
+      },
+      {
+        "body": "A subjective (on the part of the evaluator) assessment of the system's security.",
+        "right": false
+      },
+      {
+        "body": "A set of recommendations on how to secure the evaluated system.",
+        "right": false
+      },
+      {
+        "body": "A discrete evaluation (yes/no) of the given requirements for the evaluated system.",
+        "right": true
+      }
+    ]
+  },
+  {
+    "name": "By hybrid cryptosystems, we mean, for example",
+    "answers": [
+      {
+        "body": "Data is encrypted using an asymmetric cryptography algorithm before signing.",
+        "right": false
+      },
+      {
+        "body": "Data is encrypted with a random symmetric key, which is then encrypted with the recipient's public key.",
+        "right": true
+      },
+      {
+        "body": "Data is hashed before encryption with a symmetric cryptography algorithm; only the resulting hash is encrypted.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "Security requirements according to the FIPS 140-1/2 standard for evaluating cryptographic modules include:",
+    "answers": [
+      {
+        "body": "Physical security",
+        "right": true
+      },
+      {
+        "body": "Module interfaces",
+        "right": true
+      },
+      {
+        "body": "O/S security",
+        "right": true
+      },
+      {
+        "body": "Module GUI testing",
+        "right": false
+      },
+      {
+        "body": "Services and authentication",
+        "right": true
+      },
+      {
+        "body": "Resilience to human factor",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "Security is primarily based on",
+    "answers": [
+      {
+        "body": "prevention, detection, and response to possible problems.",
+        "right": true
+      },
+      {
+        "body": "correct security settings for both the network and end stations.",
+        "right": false
+      },
+      {
+        "body": "updated antivirus and correctly configured firewall, possibly also using PGP.",
+        "right": false
+      },
+      {
+        "body": "agreement with users.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "Security requirements according to the FIPS 140-1/2 standard for evaluating cryptographic modules include:",
+    "answers": [
+      {
+        "body": "Electromagnetic resonance",
+        "right": false
+      },
+      {
+        "body": "Key management",
+        "right": true
+      },
+      {
+        "body": "Services and authentication",
+        "right": true
+      },
+      {
+        "body": "Module interfaces",
+        "right": true
+      },
+      {
+        "body": "Module flexibility",
+        "right": false
+      },
+      {
+        "body": "Mitigation of other attacks",
+        "right": true
+      }
+    ]
+  },
+  {
+    "name": "The onion scheme used, for example, in Onion Routing",
+    "answers": [
+      {
+        "body": "uses both symmetric and asymmetric cryptography.",
+        "right": true
+      },
+      {
+        "body": "uses only asymmetric cryptography.",
+        "right": false
+      },
+      {
+        "body": "uses only symmetric cryptography because it is faster.",
+        "right": false
+      },
+      {
+        "body": "cryptography is not used at all, it is not needed.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "Which of these statements are correct when talking about biometric systems?",
+    "answers": [
+      {
+        "body": "The identification process is more demanding than the verification process.",
+        "right": true
+      },
+      {
+        "body": "At the beginning of the verification process, the identity is not known.",
+        "right": false
+      },
+      {
+        "body": "At the beginning of the verification process, the identity is known.",
+        "right": true
+      },
+      {
+        "body": "The verification process is more demanding than the identification process.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "What is the goal of ensuring data confidentiality?",
+    "answers": [
+      {
+        "body": "To conceal the existence of data semantics from untrusted individuals.",
+        "right": false
+      },
+      {
+        "body": "To prevent unauthorized individuals from changing the semantic content of data.",
+        "right": false
+      },
+      {
+        "body": "To prevent unauthorized individuals from discovering the semantic content of data.",
+        "right": true
+      }
+    ]
+  },
+  {
+    "name": "Authentication is",
+    "answers": [
+      {
+        "body": "a typo - the correct term is \"authorization\".",
+        "right": false
+      },
+      {
+        "body": "an optional (but usually present) phase of the identity proving process.",
+        "right": false
+      },
+      {
+        "body": "all other options are false.",
+        "right": true
+      },
+      {
+        "body": "a process necessary for establishing encrypted communication in a wireless connection.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "An Intrusion Detection System (IDS)",
+    "answers": [
+      {
+        "body": "can be used either on a network or on a computer.",
+        "right": false
+      },
+      {
+        "body": "makes sense to use only as a network element, when it detects and informs about an ongoing attack.",
+        "right": false
+      },
+      {
+        "body": "can be used both on a network and on a computer.",
+        "right": true
+      },
+      {
+        "body": "provides better protection than a firewall.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "Which statement is correct:",
+    "answers": [
+      {
+        "body": "During TLS/SSL \"Handshake\", certificates of both parties are mandatorily checked.",
+        "right": false
+      },
+      {
+        "body": "The \"Record\" protocol allows for the transfer/storage of unsecured data for the needs of the US government, according to §708, paragraph 17 of the Homeland Security Act.",
+        "right": false
+      },
+      {
+        "body": "The TLS/SSL \"Handshake\" protocol is used to establish a secure connection; the \"Record\" protocol represents the basic layer.",
+        "right": true
+      },
+      {
+        "body": "During TLS/SSL \"Handshake\", user authentication is performed with a password.",
+        "right": false
+      },
+      {
+        "body": "The use of the TLS/SSL \"Handshake\" protocol is optional depending on the requirements of the client and server.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "What determines the number of rounds in the Rijndael algorithm?",
+    "answers": [
+      {
+        "body": "Block length",
+        "right": false
+      },
+      {
+        "body": "Key length and block length",
+        "right": false
+      },
+      {
+        "body": "Initialization vector",
+        "right": false
+      },
+      {
+        "body": "Initialization vector and block length",
+        "right": false
+      },
+      {
+        "body": "Message length",
+        "right": false
+      },
+      {
+        "body": "Key length",
+        "right": true
+      }
+    ]
+  },
+  {
+    "name": "Pseudonymity (according to A. Pfitzmann - mixes) means:",
+    "answers": [
+      {
+        "body": "Using a pseudonym as an identifier (ID).",
+        "right": true
+      },
+      {
+        "body": "Being anonymous with the possibility of retrospectively determining the real identity.",
+        "right": false
+      },
+      {
+        "body": "Being anonymous only to system users, not to administrators.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "By weak data integrity, we mean",
+    "answers": [
+      {
+        "body": "Data must not change its state at all without the permission of an authorized person.",
+        "right": false
+      },
+      {
+        "body": "Data must not unnoticeably change its state without the permission of an authorized person.",
+        "right": true
+      },
+      {
+        "body": "Data must not be processed at a semantic level without the permission of an authorized person.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "What are (from the user's perspective) the two least secure components of today's payment systems?",
+    "answers": [
+      {
+        "body": "Chip card with a magnetic stripe.",
+        "right": true
+      },
+      {
+        "body": "ATM.",
+        "right": false
+      },
+      {
+        "body": "Payment terminal.",
+        "right": true
+      },
+      {
+        "body": "Chip card.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "What is the biggest security problem for customers in today's payment systems?",
+    "answers": [
+      {
+        "body": "Banks already rejected the use of the secure SET (Secure Electronic Transaction) protocol in the 90s.",
+        "right": false
+      },
+      {
+        "body": "Voltage attacks are an easy and effective way to bypass the security mechanisms of the chip on a payment card.",
+        "right": false
+      },
+      {
+        "body": "The current system works in such a way that it does not guarantee the customer a link between the displayed and confirmed transaction.",
+        "right": true
+      },
+      {
+        "body": "Customers themselves behave irresponsibly.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "What is a critical query in a statistical database?",
+    "answers": [
+      {
+        "body": "A query that the database must not evaluate, as it would lead to the disclosure of information about an individual or a small group of people.",
+        "right": true
+      },
+      {
+        "body": "A query whose evaluation takes a long time and requires all the database's computing power, which can thereby become unavailable for other queries.",
+        "right": false
+      },
+      {
+        "body": "A sequence composed of legitimate queries to a statistical database with the aim of obtaining information about an individual or a small group of people.",
+        "right": true
+      },
+      {
+        "body": "A query that can only be posed when no data updates are occurring in the database.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "For anonymous communication networks, the following applies:",
+    "answers": [
+      {
+        "body": "the achieved anonymity is application-independent.",
+        "right": false
+      },
+      {
+        "body": "the content of sent messages is not encrypted between nodes.",
+        "right": false
+      },
+      {
+        "body": "they can be susceptible to traffic analysis.",
+        "right": true
+      },
+      {
+        "body": "inputs cannot be easily linked to outputs.",
+        "right": true
+      }
+    ]
+  },
+  {
+    "name": "The AN.ON project provides the same services as",
+    "answers": [
+      {
+        "body": "Mixmaster.",
+        "right": false
+      },
+      {
+        "body": "Onion routing.",
+        "right": true
+      },
+      {
+        "body": "Mixminion.",
+        "right": false
+      },
+      {
+        "body": "TOR.",
+        "right": true
+      }
+    ]
+  },
+  {
+    "name": "Which of the following methods can be used for risk analysis?",
+    "answers": [
+      {
+        "body": "AES (Advanced Evaluation Standard) method",
+        "right": false
+      },
+      {
+        "body": "ALE (Annual Loss Expectancy) method",
+        "right": true
+      },
+      {
+        "body": "ARO (Annualized Rate of Occurrence) method",
+        "right": false
+      },
+      {
+        "body": "BPA (Business Process Analysis) method",
+        "right": true
+      },
+      {
+        "body": "RSA (Risk System Analysis) method",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "A public key certificate (e.g., X.509) issued by a trusted certification authority allows",
+    "answers": [
+      {
+        "body": "To obtain the public key of a specific user.",
+        "right": true
+      },
+      {
+        "body": "To prevent the loss of a private key.",
+        "right": false
+      },
+      {
+        "body": "To verify the identity of the public key presenter.",
+        "right": true
+      },
+      {
+        "body": "To gain access to a specific user's encrypted data in a critical situation by an authorized organization.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "Which of the following protocols prevents someone to whom you once prove knowledge of secret information from later impersonating you:",
+    "answers": [
+      {
+        "body": "a protocol based on zero-knowledge proof.",
+        "right": true
+      },
+      {
+        "body": "a protocol that uses encryption to secure the transmission of authentication data.",
+        "right": false
+      },
+      {
+        "body": "a challenge-response protocol that uses asymmetric cryptography only for signing, but not for encryption.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "How do we verify the authenticity of a certificate issued by a trusted certification authority?",
+    "answers": [
+      {
+        "body": "We use the meta-certificate of the certification authority.",
+        "right": false
+      },
+      {
+        "body": "We verify if the name of the certification authority matches the name indicated on the given certificate.",
+        "right": false
+      },
+      {
+        "body": "We verify if the certificate is signed by the given certification authority.",
+        "right": true
+      },
+      {
+        "body": "We verify if the hash of the certificate matches the hash indicated in the certificate.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "If a vulnerability exists in a system and an attacker exists who can exploit it, the resulting state is called: ",
+    "answers": [
+      {
+        "body": "threat",
+        "right": true
+      },
+      {
+        "body": "vulnerability",
+        "right": false
+      },
+      {
+        "body": "attack",
+        "right": false
+      },
+      {
+        "body": "risk",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "The term transitivity of trust refers to:",
+    "answers": [
+      {
+        "body": "the trust of a foreign user X in our public key, if user Y, whom user X trusts, trusts it.",
+        "right": true
+      },
+      {
+        "body": "the trust of user X in our public key, if we trust their public key. Such a term does not exist.",
+        "right": false
+      },
+      {
+        "body": "trust in the public key of user X, who is trusted by user Y, whom we trust.",
+        "right": true
+      },
+      {
+        "body": "trust in the propagation of our public key from user X to user Y.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "Why do payment cards with a chip have a magnetic stripe?",
+    "answers": [
+      {
+        "body": "For backward compatibility.",
+        "right": true
+      },
+      {
+        "body": "The chip performs cryptographic operations on data stored on the magnetic stripe.",
+        "right": false
+      },
+      {
+        "body": "None of these answers are correct.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "When is EER (Equal Error Rate) achieved in biometric systems?",
+    "answers": [
+      {
+        "body": "Setting a threshold value for which FAR/FRR equals 0.8.",
+        "right": false
+      },
+      {
+        "body": "Setting a threshold value for which FRR/FAR equals 0.8.",
+        "right": false
+      },
+      {
+        "body": "Setting a threshold value for which FRR and FAR are equal.",
+        "right": true
+      },
+      {
+        "body": "Setting a threshold value for which FRR equals 1.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "Obligations of a personal data controller:",
+    "answers": [
+      {
+        "body": "to archive data in an encoded form, unless otherwise stated.",
+        "right": false
+      },
+      {
+        "body": "to keep data only for the time necessary for their processing.",
+        "right": true
+      },
+      {
+        "body": "to collect personal data corresponding only to the stated purpose and to the extent necessary to fulfill the stated purpose.",
+        "right": true
+      },
+      {
+        "body": "to insert false records so that in case of data theft, it is not easy to assess their validity.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "Obligations of a personal data controller:",
+    "answers": [
+      {
+        "body": "to insert false records so that in case of data theft, it is not easy to assess their validity.",
+        "right": false
+      },
+      {
+        "body": "not to provide data to third parties before drawing up a Personal Data Provision Agreement.",
+        "right": false
+      },
+      {
+        "body": "to determine the means and manner of processing personal data.",
+        "right": true
+      },
+      {
+        "body": "to archive data in an encoded form, unless otherwise specified.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "Which technique is not valid for anonymous communication networks:",
+    "answers": [
+      {
+        "body": "reordering messages within a node.",
+        "right": false
+      },
+      {
+        "body": "encrypting messages between nodes with an RSA algorithm with a key length dependent on the number of nodes.",
+        "right": true
+      },
+      {
+        "body": "delaying received messages.",
+        "right": false
+      },
+      {
+        "body": "non-deterministic sending of received messages over time.",
+        "right": false
+      },
+      {
+        "body": "using minixes for forwarding messages.",
+        "right": true
+      }
+    ]
+  },
+  {
+    "name": "What are Identity Management Systems (IMS) used for?",
+    "answers": [
+      {
+        "body": "A system for managing public keys with identifiers.",
+        "right": false
+      },
+      {
+        "body": "For designing and managing identity attributes.",
+        "right": true
+      },
+      {
+        "body": "For long-term archiving of stolen identification documents.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "Common security policies include:",
+    "answers": [
+      {
+        "body": "Inter-application security policy",
+        "right": false
+      },
+      {
+        "body": "Integrated security policy",
+        "right": false
+      },
+      {
+        "body": "Horizontal security policy",
+        "right": false
+      },
+      {
+        "body": "Overall security policy",
+        "right": true
+      },
+      {
+        "body": "System-specific security policy",
+        "right": true
+      }
+    ]
+  },
+  {
+    "name": "The liveness problem for input devices means that:",
+    "answers": [
+      {
+        "body": "None of these answers are correct.",
+        "right": false
+      },
+      {
+        "body": "The input device is unable to determine if the sample is from the person currently at the input device.",
+        "right": false
+      },
+      {
+        "body": "The input device is unable to determine if the sample is from a live person.",
+        "right": true
+      },
+      {
+        "body": "The person logging in at the input device is unable to determine where their sample will be forwarded.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "If an unauthorized person discovers the semantic content of protected data, it is a breach of",
+    "answers": [
+      {
+        "body": "confidentiality",
+        "right": true
+      },
+      {
+        "body": "integrity",
+        "right": false
+      },
+      {
+        "body": "availability",
+        "right": false
+      },
+      {
+        "body": "accountability",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "Usually the least secure point during authentication in internet banking is:",
+    "answers": [
+      {
+        "body": "bank authentication.",
+        "right": true
+      },
+      {
+        "body": "client's computer authentication.",
+        "right": false
+      },
+      {
+        "body": "client authentication.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "The goal of the Eternity server project is",
+    "answers": [
+      {
+        "body": "to design a service that is resistant to Denial of Service attacks.",
+        "right": false
+      },
+      {
+        "body": "to provide permanent data storage.",
+        "right": true
+      },
+      {
+        "body": "to provide permanent data storage with store, find, and delete operations.",
+        "right": false
+      },
+      {
+        "body": "to create a data storage that is resilient to outages.",
+        "right": true
+      }
+    ]
+  },
+  {
+    "name": "What is the biggest security problem for customers in today's payment systems?",
+    "answers": [
+      {
+        "body": "Customers themselves behave irresponsibly.",
+        "right": false
+      },
+      {
+        "body": "Banks already rejected the use of the secure SET (Secure Electronic Transaction) protocol in the 90s.",
+        "right": false
+      },
+      {
+        "body": "Voltage attacks are an easy and effective way to bypass the security mechanisms of the chip on a payment card.",
+        "right": false
+      },
+      {
+        "body": "The current system works in such a way that it does not guarantee the customer a link between the displayed and confirmed transaction.",
+        "right": true
+      }
+    ]
+  },
+  {
+    "name": "PGP allows setting a trust level for a specific public key. This setting is used for:",
+    "answers": [
+      {
+        "body": "filtering messages that can be sent to a given user.",
+        "right": false
+      },
+      {
+        "body": "indicating trust in the origin of data signed by the owner of the corresponding private key.",
+        "right": true
+      },
+      {
+        "body": "indicating trust in the origin of data signed by the given public key.",
+        "right": false
+      },
+      {
+        "body": "controlling the group of people to whom our public key can be distributed.",
+        "right": false
+      },
+      {
+        "body": "indicating trust in a key based on its bit size.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "Which of these statements are correct?",
+    "answers": [
+      {
+        "body": "Copying measured biological characteristics of a person is not trivial, but not impossible either.",
+        "right": true
+      },
+      {
+        "body": "Biometric data is secret.",
+        "right": false
+      },
+      {
+        "body": "Biometrics, after analysis using cryptography, reveal information about the subject of the message.",
+        "right": false
+      },
+      {
+        "body": "Biometrics, in an ideal case, accurately determine a person's identity, thus allowing their individual actions to be linked.",
+        "right": true
+      }
+    ]
+  },
+  {
+    "name": "Is there any attack on the TOR service that reduces user anonymity?",
+    "answers": [
+      {
+        "body": "Yes, there is an attack that can reduce user anonymity.",
+        "right": true
+      },
+      {
+        "body": "Yes, there is an attack that will 100% \"de-anonymize\" all users.",
+        "right": false
+      },
+      {
+        "body": "No, TOR is designed to withstand all known and unknown types of attacks.",
+        "right": false
+      },
+      {
+        "body": "No, no such attack is known yet.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "Which of these statements are correct when talking about biometric systems?",
+    "answers": [
+      {
+        "body": "The verification process is more demanding than the identification process.",
+        "right": false
+      },
+      {
+        "body": "At the beginning of the verification process, the identity is not known.",
+        "right": false
+      },
+      {
+        "body": "At the beginning of the verification process, the identity is known.",
+        "right": true
+      },
+      {
+        "body": "The identification process is more demanding than the verification process.",
+        "right": true
+      }
+    ]
+  },
+  {
+    "name": "Kerckhoffs's principle is not currently valid:",
+    "answers": [
+      {
+        "body": "Because we can brute-force keys longer than 80 bits.",
+        "right": false
+      },
+      {
+        "body": "Since current key lengths do not allow effective brute-force attacks.",
+        "right": false
+      },
+      {
+        "body": "Because we can effectively keep encryption algorithms secret.",
+        "right": false
+      },
+      {
+        "body": "Nonsense, Kerckhoffs's principle is still valid today.",
+        "right": true
+      }
+    ]
+  },
+  {
+    "name": "Kerckhoffs's principle states that:",
+    "answers": [
+      {
+        "body": "The algorithm used is publicly known; only the key is kept secret.",
+        "right": true
+      },
+      {
+        "body": "The key does not need to be kept secret if the algorithm used is publicly known.",
+        "right": false
+      },
+      {
+        "body": "The algorithm used is accessible only to authorized persons; the key is kept secret.",
+        "right": false
+      },
+      {
+        "body": "The key does not need to be kept secret if the algorithm used is also secret.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "The AN.ON project provides the same services as",
+    "answers": [
+      {
+        "body": "Onion routing.",
+        "right": true
+      },
+      {
+        "body": "Mixmaster.",
+        "right": false
+      },
+      {
+        "body": "Mixminion.",
+        "right": false
+      },
+      {
+        "body": "TOR.",
+        "right": true
+      }
+    ]
+  },
+  {
+    "name": "What is a statistical database?",
+    "answers": [
+      {
+        "body": "A database that allows obtaining statistical information about individuals.",
+        "right": false
+      },
+      {
+        "body": "A database that contains information about individuals but only allows statistical queries, i.e., does not allow obtaining information about individuals.",
+        "right": true
+      },
+      {
+        "body": "A database supervised by the Czech Statistical Office.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "Threat analysis and assessment includes:",
+    "answers": [
+      {
+        "body": "Consideration of what all should be protected.",
+        "right": true
+      },
+      {
+        "body": "Rules and procedures determining the manner of protection and handling of protected assets.",
+        "right": false
+      },
+      {
+        "body": "Techniques for implementing security functions protecting protected assets.",
+        "right": false
+      },
+      {
+        "body": "Evaluation of what threats menace protected assets.",
+        "right": true
+      }
+    ]
+  },
+  {
+    "name": "Security policy is",
+    "answers": [
+      {
+        "body": "A document approved by top management specifying the use of IT to achieve organizational goals.",
+        "right": false
+      },
+      {
+        "body": "A set of measures and mechanisms needed to achieve the required minimum level of prevention and detection of vulnerabilities.",
+        "right": false
+      },
+      {
+        "body": "A document approved by a board member establishing precise rules for securing technical and human resources for the use of IT to achieve organizational goals.",
+        "right": false
+      },
+      {
+        "body": "A set of rules specifying an effective way of implementing measures needed to achieve the required minimum level of risk.",
+        "right": true
+      }
+    ]
+  },
+  {
+    "name": "Classic unlocking of a door lock with a key",
+    "answers": [
+      {
+        "body": "falls under authentication procedures.",
+        "right": true
+      },
+      {
+        "body": "does not fall under authentication (a key is neither something I know, nor something I \"am\").",
+        "right": false
+      },
+      {
+        "body": "falls under authentication procedures, but only if the key fits the lock.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "How is risk analysis performed using the CRAMM method?",
+    "answers": [
+      {
+        "body": "Infrastructural approach: identification and valuation of assets, mainly considering investments and infrastructure risks.",
+        "right": false
+      },
+      {
+        "body": "Unstructured approach: creation of a risk and vulnerability table based on a spiral model.",
+        "right": false
+      },
+      {
+        "body": "Unstructured approach: incremental estimation of threats and vulnerabilities of assets based on an extended spiral model.",
+        "right": false
+      },
+      {
+        "body": "Structured approach: i. identification and valuation of assets; ii. estimation of threats and vulnerabilities of assets; iii. selection of appropriate countermeasures.",
+        "right": true
+      },
+      {
+        "body": "Structured approach: i. estimation of threats and vulnerabilities of assets; ii. programming of appropriate countermeasures.",
+        "right": false
+      },
+      {
+        "body": "Ad-hoc approach: estimation of threats and vulnerabilities of assets based on a common list of assets (the method can be parallelized).",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "For email messages sent using the Mixminion system, the following applies",
+    "answers": [
+      {
+        "body": "they are anonymous.",
+        "right": true
+      },
+      {
+        "body": "it is possible to reply to them within a certain time frame.",
+        "right": true
+      },
+      {
+        "body": "the user specifies the path through the network.",
+        "right": true
+      },
+      {
+        "body": "replies are delivered in the system differently from normal emails.",
+        "right": false
+      },
+      {
+        "body": "email headers are not modified.",
+        "right": false
+      },
+      {
+        "body": "they are pseudonymous.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "The statement \"Use of a service for unauthorized access\" could denote",
+    "answers": [
+      {
+        "body": "risk.",
+        "right": false
+      },
+      {
+        "body": "vulnerability.",
+        "right": false
+      },
+      {
+        "body": "threat.",
+        "right": true
+      },
+      {
+        "body": "attack.",
+        "right": false
+      },
+      {
+        "body": "security policy.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "You can detect suspicious network behavior with",
+    "answers": [
+      {
+        "body": "an antivirus program.",
+        "right": false
+      },
+      {
+        "body": "a honeypot.",
+        "right": true
+      },
+      {
+        "body": "an antispyware program.",
+        "right": false
+      },
+      {
+        "body": "an IDS.",
+        "right": true
+      },
+      {
+        "body": "a firewall.",
+        "right": true
+      }
+    ]
+  },
+  {
+    "name": "What is the difference between the terms security and safety?",
+    "answers": [
+      {
+        "body": "It's the same thing; English uses only one term - security.",
+        "right": false
+      },
+      {
+        "body": "Safety - state of IS protection against losses; security - no threat to human life.",
+        "right": false
+      },
+      {
+        "body": "Security - state of IS protection against losses; safety - no threat to human life.",
+        "right": true
+      }
+    ]
+  },
+  {
+    "name": "Why do payment cards with a chip have a magnetic stripe?",
+    "answers": [
+      {
+        "body": "The chip performs cryptographic operations on data stored on the magnetic stripe.",
+        "right": false
+      },
+      {
+        "body": "For backward compatibility.",
+        "right": true
+      },
+      {
+        "body": "None of these answers are correct.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "What is data aggregation?",
+    "answers": [
+      {
+        "body": "Grouping (personal) data into large databases.",
+        "right": true
+      },
+      {
+        "body": "Deriving new (typically more sensitive) information based on processing information with a lower level of sensitivity.",
+        "right": false
+      },
+      {
+        "body": "\"Cleansing\" large databases.",
+        "right": false
+      },
+      {
+        "body": "Backing up data as a defense against natural disasters.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "By asymmetric cryptography, we mean",
+    "answers": [
+      {
+        "body": "Cryptography with an algorithm that is the opposite of symmetric cryptography and uses no key.",
+        "right": false
+      },
+      {
+        "body": "Cryptography using a key that is the output of a quality hash function.",
+        "right": false
+      },
+      {
+        "body": "Cryptography using a pair of private and public keys.",
+        "right": true
+      },
+      {
+        "body": "None of the other options listed.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "Misuses of a mobile phone by an operator include:",
+    "answers": [
+      {
+        "body": "SMS messages sent from mobile to mobile can be easily stored.",
+        "right": true
+      },
+      {
+        "body": "the location of the mobile phone can be tracked.",
+        "right": true
+      },
+      {
+        "body": "none of these answers are correct because all communication is securely encrypted.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "What are (from the user's perspective) the two least secure components of today's payment systems?",
+    "answers": [
+      {
+        "body": "Chip card with a magnetic stripe.",
+        "right": true
+      },
+      {
+        "body": "Payment terminal.",
+        "right": true
+      },
+      {
+        "body": "ATM.",
+        "right": false
+      },
+      {
+        "body": "Chip card.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "Which two of these biometric techniques are the most accurate?",
+    "answers": [
+      {
+        "body": "signature dynamics",
+        "right": false
+      },
+      {
+        "body": "iris pattern",
+        "right": true
+      },
+      {
+        "body": "voice",
+        "right": false
+      },
+      {
+        "body": "retina pattern",
+        "right": true
+      }
+    ]
+  },
+  {
+    "name": "SSL/TLS protocols allow",
+    "answers": [
+      {
+        "body": "integrity checking of transmitted data.",
+        "right": true
+      },
+      {
+        "body": "anonymous communication.",
+        "right": false
+      },
+      {
+        "body": "ensuring non-repudiation.",
+        "right": false
+      },
+      {
+        "body": "authentication of communicating parties (client and server).",
+        "right": true
+      },
+      {
+        "body": "authentication of only one party.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "Choose the correct hierarchy according to the type of pseudonym (in the direction of increasing anonymity and unlinkability).",
+    "answers": [
+      {
+        "body": "Person pseudonym > role-relationship pseudonym > relationship pseudonym > role pseudonym > transaction pseudonym.",
+        "right": false
+      },
+      {
+        "body": "Person pseudonym > role pseudonym and relationship pseudonym > role-relationship pseudonym > transaction pseudonym.",
+        "right": true
+      },
+      {
+        "body": "Transaction pseudonym > role-relationship pseudonym > role pseudonym and relationship pseudonym > person pseudonym.",
+        "right": false
+      },
+      {
+        "body": "Person pseudonym > transaction pseudonym > role pseudonym and relationship pseudonym > role-relationship pseudonym.",
+        "right": false
+      },
+      {
+        "body": "Person pseudonym > role-relationship pseudonym > role pseudonym > relationship pseudonym > transaction pseudonym.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "Which of these statements are correct?",
+    "answers": [
+      {
+        "body": "Biometrics, after analysis using cryptography, reveal information about the subject of the message.",
+        "right": false
+      },
+      {
+        "body": "One sample can only be used in one system.",
+        "right": false
+      },
+      {
+        "body": "None of these answers are correct.",
+        "right": true
+      },
+      {
+        "body": "Biometric data is secret.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "What does data confidentiality mean?",
+    "answers": [
+      {
+        "body": "Concealment of the contained information.",
+        "right": true
+      },
+      {
+        "body": "Ensuring data integrity.",
+        "right": false
+      },
+      {
+        "body": "Data is in an unchanged form as it was created.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "TOR's rendezvous points and hidden services are:",
+    "answers": [
+      {
+        "body": "places where users gain anonymity in a way that others do not see.",
+        "right": false
+      },
+      {
+        "body": "a service that allows anonymous operation of, for example, a web server.",
+        "right": true
+      },
+      {
+        "body": "places where only anonymous users meet.",
+        "right": false
+      },
+      {
+        "body": "a service allowing a server to control anonymous incoming requests.",
+        "right": true
+      }
+    ]
+  },
+  {
+    "name": "Pretty Good Privacy (PGP) allows",
+    "answers": [
+      {
+        "body": "encrypting and decrypting data.",
+        "right": true
+      },
+      {
+        "body": "digitally signing data and verifying a signature.",
+        "right": true
+      },
+      {
+        "body": "anonymously accessing the web.",
+        "right": false
+      },
+      {
+        "body": "sending, receiving, and replying to anonymous email.",
+        "right": false
+      },
+      {
+        "body": "protecting a computer from misuse.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "Is it better to use TOR or Mixminion?",
+    "answers": [
+      {
+        "body": "Definitely TOR.",
+        "right": false
+      },
+      {
+        "body": "Neither one nor the other.",
+        "right": false
+      },
+      {
+        "body": "It depends on what we want to do.",
+        "right": true
+      },
+      {
+        "body": "Definitely Mixminion.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "A remailer is",
+    "answers": [
+      {
+        "body": "a service for anonymously sending and receiving emails.",
+        "right": true
+      },
+      {
+        "body": "part of a mail server that handles retrying unsuccessful attempts.",
+        "right": false
+      },
+      {
+        "body": "a public mail server (considered incorrectly configured).",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "Authentication with a zero-knowledge protocol",
+    "answers": [
+      {
+        "body": "prevents the verifier from being able to later unlawfully impersonate the proving party.",
+        "right": true
+      },
+      {
+        "body": "prevents the proving party from learning the secret possessed by the verifier.",
+        "right": false
+      },
+      {
+        "body": "prevents the verifier from learning the secret possessed by the proving party.",
+        "right": true
+      },
+      {
+        "body": "tells the verifier only the number of zeros in the proving party's secret key.",
+        "right": false
+      },
+      {
+        "body": "prevents the verifier from simultaneously authenticating to the proving party.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "What were the reasons (and motivations) for introducing security criteria?",
+    "answers": [
+      {
+        "body": "Standardization of cryptographic primitives.",
+        "right": false
+      },
+      {
+        "body": "It was a clever marketing move by manufacturers of poorly secured operating systems.",
+        "right": false
+      },
+      {
+        "body": "Facilitating the specification of requirements for design and development.",
+        "right": true
+      },
+      {
+        "body": "Easier and faster development of implicitly secure systems.",
+        "right": false
+      },
+      {
+        "body": "The need to minimize costs for individual evaluation.",
+        "right": true
+      }
+    ]
+  },
+  {
+    "name": "For conservative checking of a public key certificate, the following applies:",
+    "answers": [
+      {
+        "body": "None of the other options listed.",
+        "right": false
+      },
+      {
+        "body": "We consider the key valid until we are convinced otherwise.",
+        "right": false
+      },
+      {
+        "body": "We consider the key invalidated unless the X.509 standard specifies otherwise.",
+        "right": false
+      },
+      {
+        "body": "We consider the key invalid until we are convinced otherwise.",
+        "right": true
+      }
+    ]
+  },
+  {
+    "name": "For liberal checking of a public key certificate, the following applies:",
+    "answers": [
+      {
+        "body": "We consider the key valid until we are convinced otherwise.",
+        "right": true
+      },
+      {
+        "body": "We consider the key invalid until we are convinced otherwise.",
+        "right": false
+      },
+      {
+        "body": "We consider the key invalidated unless the X.509 standard specifies otherwise.",
+        "right": false
+      },
+      {
+        "body": "None of the other options listed.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "How does the random sampling technique work in statistical databases?",
+    "answers": [
+      {
+        "body": "The query result is evaluated based on randomly selected records from all existing records in the database.",
+        "right": true
+      },
+      {
+        "body": "No such technique exists.",
+        "right": false
+      },
+      {
+        "body": "The query result is rounded to the value of a randomly selected record.",
+        "right": false
+      },
+      {
+        "body": "The query result is evaluated based on slightly modified records that are randomly selected from all existing records in the database.",
+        "right": false
+      },
+      {
+        "body": "The query result is completely random and unpredictable.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "To ensure accountability?",
+    "answers": [
+      {
+        "body": "At the beginning of work in the system, data decryption for working with the account is usually performed.",
+        "right": false
+      },
+      {
+        "body": "At the beginning of work in the system, authentication or identification is usually performed.",
+        "right": false
+      },
+      {
+        "body": "Data archiving is performed to maintain the ability to manage the account.",
+        "right": false
+      },
+      {
+        "body": "Data archiving is performed, enabling the linking of activity with a specific person so that the person cannot deny responsibility for their actions.",
+        "right": true
+      }
+    ]
+  },
+  {
+    "name": "Encryption in PGP is done by encrypting data",
+    "answers": [
+      {
+        "body": "asymmetrically; keys are encrypted with the recipient's private key and attached to the data.",
+        "right": false
+      },
+      {
+        "body": "asymmetrically; keys are encrypted with the recipient's public key and attached to the data.",
+        "right": false
+      },
+      {
+        "body": "symmetrically; the symmetric key is encrypted with the recipient's private key and attached to the data.",
+        "right": false
+      },
+      {
+        "body": "symmetrically; the symmetric key is encrypted with the recipient's public key and attached to the data.",
+        "right": true
+      }
+    ]
+  },
+  {
+    "name": "Typical operations on a firewall are",
+    "answers": [
+      {
+        "body": "hash",
+        "right": false
+      },
+      {
+        "body": "xor",
+        "right": false
+      },
+      {
+        "body": "deny",
+        "right": true
+      },
+      {
+        "body": "permit",
+        "right": true
+      },
+      {
+        "body": "translate (NAT)",
+        "right": true
+      }
+    ]
+  },
+  {
+    "name": "Which two of these biometric techniques are usually the cheapest in terms of total deployment costs for end-users or their workstations?",
+    "answers": [
+      {
+        "body": "fingerprint.",
+        "right": true
+      },
+      {
+        "body": "retina pattern.",
+        "right": false
+      },
+      {
+        "body": "keystroke dynamics.",
+        "right": true
+      },
+      {
+        "body": "DNA.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "What does the Act on Personal Data Protection address?",
+    "answers": [
+      {
+        "body": "it applies to personal data processed by state authorities, local government bodies, other public authorities, as well as natural and legal persons, unless otherwise stipulated.",
+        "right": true
+      },
+      {
+        "body": "it regulates the right to protection of personal data for individuals with a criminal record during their sentence.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "The magnetic stripe of a standard payment card contains:",
+    "answers": [
+      {
+        "body": "owner information.",
+        "right": true
+      },
+      {
+        "body": "data on the last 3-5 transactions with the card.",
+        "right": false
+      },
+      {
+        "body": "card information.",
+        "right": true
+      },
+      {
+        "body": "data on the amount last withdrawn or paid by the cardholder.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "How does the maximum query range technique work in statistical databases?",
+    "answers": [
+      {
+        "body": "Only a smaller number of records than the specified maximum limit can be used to evaluate the query.",
+        "right": false
+      },
+      {
+        "body": "No such technique exists.",
+        "right": true
+      },
+      {
+        "body": "No more records than the specified maximum limit may be used to evaluate the query.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "The term script kiddies refers to:",
+    "answers": [
+      {
+        "body": "An attacker who is able to creatively discover new vulnerabilities even without knowledge of the system.",
+        "right": false
+      },
+      {
+        "body": "A hacker who writes scripts and discovers new system vulnerabilities. Has partial information about the system.",
+        "right": false
+      },
+      {
+        "body": "An attacker who lacks sufficient knowledge of the system and uses commonly available pre-prepared tools for known vulnerabilities, often by trial and error.",
+        "right": true
+      }
+    ]
+  },
+  {
+    "name": "Rules for accessing the computer network of (FI) MU",
+    "answers": [
+      {
+        "body": "if necessary, it is permitted to reconfigure a PC that is under the administration of CVT FI.",
+        "right": false
+      },
+      {
+        "body": "it is forbidden to eavesdrop on traffic and create copies of mail messages.",
+        "right": true
+      },
+      {
+        "body": "it is permitted to run one's own game server only after 10:00 PM.",
+        "right": false
+      },
+      {
+        "body": "it is necessary to choose good passwords, not to find out others' passwords.",
+        "right": true
+      },
+      {
+        "body": "in computer labs and on FI computers, it is possible to play only legally purchased games.",
+        "right": false
+      },
+      {
+        "body": "the user may only provide such software and data files for which they own a valid license.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "What is a Protection Profile (PP)?",
+    "answers": [
+      {
+        "body": "A target combination of components clearly profiling a specific evaluated system.",
+        "right": false
+      },
+      {
+        "body": "An implementation-independent set of security requirements for a certain group of Target of Evaluation.",
+        "right": true
+      },
+      {
+        "body": "An implementation-independent set of security requirements approved by the relevant national authority (in the Czech Republic, the NBÚ).",
+        "right": false
+      },
+      {
+        "body": "A Target of Evaluation that must already be defined by a formal profiling language.",
+        "right": false
+      },
+      {
+        "body": "A target combination of components associated with a specific product or system.",
+        "right": false
+      },
+      {
+        "body": "A product or system (or part thereof) that is the subject of evaluation.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "What is \"Security through obscurity\"?",
+    "answers": [
+      {
+        "body": "The belief that only a well-concealed algorithm is secure.",
+        "right": true
+      },
+      {
+        "body": "A collective term for security mechanisms built on complexity theory.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "What is the most common cause of security incidents?",
+    "answers": [
+      {
+        "body": "Errors (unintentional).",
+        "right": true
+      },
+      {
+        "body": "Influence of nature, resources.",
+        "right": false
+      },
+      {
+        "body": "Intentional attack (sabotage) by employees (including former ones).",
+        "right": false
+      },
+      {
+        "body": "External attackers.",
+        "right": false
+      },
+      {
+        "body": "Malicious software.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "Which statement about the anonymity set is not true?",
+    "answers": [
+      {
+        "body": "the size of the anonymity set is a meaningful indicator.",
+        "right": true
+      },
+      {
+        "body": "the behavior of users in the given group does not matter.",
+        "right": true
+      },
+      {
+        "body": "contextual information in the system also matters.",
+        "right": false
+      },
+      {
+        "body": "entropy is used to determine the size of the anonymity set.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "An Onion Routing system refers to",
+    "answers": [
+      {
+        "body": "a system providing its services for various protocols.",
+        "right": true
+      },
+      {
+        "body": "a resilient system for anonymous communication networks.",
+        "right": false
+      },
+      {
+        "body": "a system for anonymous communication when using a public network.",
+        "right": true
+      },
+      {
+        "body": "a system functioning in layers (e.g., TCP/IP).",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "I can achieve IP-level traffic security if I choose:",
+    "answers": [
+      {
+        "body": "IPsec",
+        "right": true
+      },
+      {
+        "body": "Stunnel",
+        "right": false
+      },
+      {
+        "body": "PGP",
+        "right": false
+      },
+      {
+        "body": "IPv6",
+        "right": true
+      },
+      {
+        "body": "IPv4s",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "Which of these statements is correct when talking about chip cards?",
+    "answers": [
+      {
+        "body": "The chip is capable of performing computation and authenticating itself using a zero-knowledge proof.",
+        "right": true
+      },
+      {
+        "body": "It is easy to create a copy of the chip, but not simultaneously of the chip and the magnetic stripe.",
+        "right": false
+      },
+      {
+        "body": "An additional chip protection mechanism is the magnetic stripe.",
+        "right": false
+      },
+      {
+        "body": "Without the very difficult technique of disassembling the chip and analyzing it, it is not possible to create a copy.",
+        "right": true
+      }
+    ]
+  },
+  {
+    "name": "Which of the following points can be classified as general principles for IT security?",
+    "answers": [
+      {
+        "body": "Do not use keys with a length < 128 bits.",
+        "right": false
+      },
+      {
+        "body": "Strive for simplicity.",
+        "right": true
+      },
+      {
+        "body": "Consider external sources as dangerous.",
+        "right": true
+      },
+      {
+        "body": "Physically or logically separate critical resources.",
+        "right": true
+      },
+      {
+        "body": "Never disclose critical security algorithms.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "By risk, we mean:",
+    "answers": [
+      {
+        "body": "the existence of a vulnerability in the system and the presence of an attacker who can exploit it.",
+        "right": false
+      },
+      {
+        "body": "the probability of a threat being realized.",
+        "right": true
+      },
+      {
+        "body": "the probability of a vulnerability being discovered.",
+        "right": false
+      },
+      {
+        "body": "the extent of the impact of a threat being realized.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "Solutions for sending anonymous emails are based on:",
+    "answers": [
+      {
+        "body": "anonymity from the recipient is very difficult to achieve.",
+        "right": false
+      },
+      {
+        "body": "anycast networks, remailers, and mixes.",
+        "right": false
+      },
+      {
+        "body": "remailers, of which we distinguish several types (classes).",
+        "right": true
+      },
+      {
+        "body": "broadcast networks, remailers, and mixes.",
+        "right": true
+      },
+      {
+        "body": "using an account on a freemail service (e.g., Seznam).",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "When signing without message recovery, the following applies:",
+    "answers": [
+      {
+        "body": "After signing, the original data is deleted and cannot be recovered.",
+        "right": false
+      },
+      {
+        "body": "The signature does not contain the signed data.",
+        "right": true
+      },
+      {
+        "body": "Before signing, it is necessary to recover the signed data; after signing, this is no longer possible without knowledge of the private key.",
+        "right": false
+      },
+      {
+        "body": "The original data itself is not signed, but its hash – fingerprint – is.",
+        "right": true
+      }
+    ]
+  },
+  {
+    "name": "For communication between individual Onion Routers (OR), the following applies",
+    "answers": [
+      {
+        "body": "the list of forwarded packets is stored.",
+        "right": true
+      },
+      {
+        "body": "the topology of nodes resembles a star with a fixed center.",
+        "right": false
+      },
+      {
+        "body": "communication is encrypted using asymmetric cryptography.",
+        "right": false
+      },
+      {
+        "body": "each OR removes a layer of the packet by decryption.",
+        "right": true
+      },
+      {
+        "body": "communication is encrypted using a symmetric key cipher.",
+        "right": true
+      }
+    ]
+  },
+  {
+    "name": "What method of public key exchange is considered trustworthy:",
+    "answers": [
+      {
+        "body": "verifying the key fingerprint by phone.",
+        "right": true
+      },
+      {
+        "body": "personal exchange on a USB drive.",
+        "right": true
+      },
+      {
+        "body": "sending by email with parallel placement on a web page.",
+        "right": false
+      },
+      {
+        "body": "posting on a key server.",
+        "right": false
+      },
+      {
+        "body": "sending via a trusted intermediary.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "The British Medical Association mandates when creating a new patient record that:",
+    "answers": [
+      {
+        "body": "Only the patient is on the record access list; other doctors are added by the head of the department.",
+        "right": false
+      },
+      {
+        "body": "Only the attending physician and the patient are on the record access list.",
+        "right": true
+      },
+      {
+        "body": "No administrative staff are on the access list until the next doctor's visit.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "The British Medical Association mandates when working with patient records:",
+    "answers": [
+      {
+        "body": "Implementation of measures to prevent data aggregation.",
+        "right": true
+      },
+      {
+        "body": "Recording all modifications made to records for audit purposes.",
+        "right": true
+      },
+      {
+        "body": "The necessity to inform the patient (upon request) about the current status of the access list to their record.",
+        "right": true
+      },
+      {
+        "body": "The necessity to inform the patient's family members (upon their request) about the current status of the access list to their record.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "A PIN is required for credit cards so that",
+    "answers": [
+      {
+        "body": "the card is harder to misuse after being copied.",
+        "right": true
+      },
+      {
+        "body": "the entire card payment system appears more secure (in reality, however, it does not increase security at all - it is there only for psychological effect).",
+        "right": false
+      },
+      {
+        "body": "a person who steals the card cannot easily use it for payments; the card is harder to copy.",
+        "right": true
+      },
+      {
+        "body": "it ensures absolute protection of money against any attack on card security.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "The statement \"The system is protected by a shared password\" could denote",
+    "answers": [
+      {
+        "body": "security policy",
+        "right": false
+      },
+      {
+        "body": "attack",
+        "right": false
+      },
+      {
+        "body": "threat",
+        "right": false
+      },
+      {
+        "body": "risk",
+        "right": false
+      },
+      {
+        "body": "vulnerability",
+        "right": true
+      }
+    ]
+  },
+  {
+    "name": "Sensitive personal data according to Czech legislation reveal, among other things, information about:",
+    "answers": [
+      {
+        "body": "national, racial, or ethnic origin.",
+        "right": true
+      },
+      {
+        "body": "attitude towards criminal activity of family members.",
+        "right": false
+      },
+      {
+        "body": "political views.",
+        "right": true
+      },
+      {
+        "body": "attitude towards criminal activity of others.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "The security of using these devices for authentication is comparable to the security of using chip cards for the same purpose:",
+    "answers": [
+      {
+        "body": "none of these answers are correct.",
+        "right": false
+      },
+      {
+        "body": "a password at least 8 characters long and randomly generated from a set of min. 95 characters.",
+        "right": false
+      },
+      {
+        "body": "authentication calculator.",
+        "right": true
+      },
+      {
+        "body": "certified USB drive.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "Properties of Onion Routing (OR) definitely include",
+    "answers": [
+      {
+        "body": "communication delay should be as small as possible.",
+        "right": true
+      },
+      {
+        "body": "it is mainly used in private networks.",
+        "right": false
+      },
+      {
+        "body": "dependence on specialized hardware.",
+        "right": false
+      },
+      {
+        "body": "it does not allow client-server communication.",
+        "right": false
+      },
+      {
+        "body": "applications can work with OR without needing modification.",
+        "right": true
+      }
+    ]
+  },
+  {
+    "name": "Properties of Onion Routing (OR) definitely do not include",
+    "answers": [
+      {
+        "body": "it is mainly used in private networks.",
+        "right": false
+      },
+      {
+        "body": "encrypted data is passed between individual ORs.",
+        "right": false
+      },
+      {
+        "body": "it allows client-server connection.",
+        "right": false
+      },
+      {
+        "body": "the selection of the next communication node is independent of the user.",
+        "right": true
+      },
+      {
+        "body": "the communication path is defined when the communication channel is established.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "For personal data according to Czech legislation, the following applies:",
+    "answers": [
+      {
+        "body": "if the identity of the subject can be directly or indirectly determined based on one or more personal data, the data subject is considered identified or identifiable.",
+        "right": true
+      },
+      {
+        "body": "it is any information relating to an identified or identifiable data subject.",
+        "right": true
+      },
+      {
+        "body": "processing of personal data is prohibited, except for cases of personal need.",
+        "right": false
+      },
+      {
+        "body": "supervision of personal data is carried out by the Police of the Czech Republic.",
+        "right": false
+      },
+      {
+        "body": "it is not considered personal data if an unreasonable amount of time or material resources is required to determine the identity of the data subject.",
+        "right": true
+      }
+    ]
+  },
+  {
+    "name": "Which two of these biometric techniques are the most convenient for users?",
+    "answers": [
+      {
+        "body": "ECG",
+        "right": false
+      },
+      {
+        "body": "face comparison",
+        "right": true
+      },
+      {
+        "body": "iris pattern",
+        "right": true
+      },
+      {
+        "body": "retina pattern",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "How is risk analysis calculated using the ALE (Annual Loss Expectancy) method?",
+    "answers": [
+      {
+        "body": "ALE=SLO x ARE, where SLO=Single Loss of Opportunity and ARE=Annualized Rate of Executions",
+        "right": false
+      },
+      {
+        "body": "ALE=SLO / ARE, where SLO=Single Loss of Opportunity and ARE=Annualized Rate of Executions",
+        "right": false
+      },
+      {
+        "body": "ALE=SLO + ARE, where SLO=Single Loss of Opportunity and ARE=Annualized Rate of Executions",
+        "right": false
+      },
+      {
+        "body": "ALE=SLE / ARO, where SLE=Single Loss Expectancy and ARO=Annualized Rate of Occurrence",
+        "right": false
+      },
+      {
+        "body": "ALE=SLE x ARO, where SLE=Single Loss Expectancy and ARO=Annualized Rate of Occurrence",
+        "right": true
+      },
+      {
+        "body": "ALE=SLE + ARO, where SLE=Single Loss Expectancy and ARO=Annualized Rate of Occurrence",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "Would it be possible to reliably authenticate an MU student based on the triplet of integers height[cm] : weight[kg] : age[years]?",
+    "answers": [
+      {
+        "body": "Yes, this is information unknown to strangers.",
+        "right": false
+      },
+      {
+        "body": "No, there are too many MU students for this to be reliable.",
+        "right": true
+      },
+      {
+        "body": "Yes, it is a physical characteristic (biometric).",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "Which of these statements are correct?",
+    "answers": [
+      {
+        "body": "Biometric data is secret.",
+        "right": false
+      },
+      {
+        "body": "Some biometrics reveal a lot about the subject.",
+        "right": true
+      },
+      {
+        "body": "Biometrics, in an ideal case, accurately determine a person's identity, thus allowing their individual actions to be linked.",
+        "right": true
+      },
+      {
+        "body": "One sample can only be used in one system.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "A digital pseudonym is a string of bits that:",
+    "answers": [
+      {
+        "body": "is unique as an ID (with very high probability).",
+        "right": true
+      },
+      {
+        "body": "is constructed strictly in accordance with the rules set by the Office for Personal Data Protection.",
+        "right": false
+      },
+      {
+        "body": "is usable for authenticating its owner and objects of interest (e.g., sent messages).",
+        "right": true
+      },
+      {
+        "body": "should be indistinguishable from random noise.",
+        "right": false
+      },
+      {
+        "body": "its holder must unconditionally memorize.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "Traffic in an anonymous network",
+    "answers": [
+      {
+        "body": "is irrelevant for maintaining a certain degree of anonymity.",
+        "right": false
+      },
+      {
+        "body": "is important for maintaining a certain degree of anonymity.",
+        "right": true
+      },
+      {
+        "body": "does not contain dummy messages.",
+        "right": false
+      },
+      {
+        "body": "is often confused with dummy messages.",
+        "right": false
+      },
+      {
+        "body": "is often enriched with dummy messages.",
+        "right": true
+      }
+    ]
+  },
+  {
+    "name": "Unobservability (according to A. Pfitzmann – mixes) means",
+    "answers": [
+      {
+        "body": "that the probability of linking elements in the system is the same before and after (during) a sequence of events in the system.",
+        "right": false
+      },
+      {
+        "body": "The state of (given) items of interest where they are indistinguishable from other items of interest.",
+        "right": true
+      },
+      {
+        "body": "A state where other users cannot observe the use of system resources.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "Which of the following statements are true? (based on the Act on Electronic Signature No. 227/2000 Coll.)",
+    "answers": [
+      {
+        "body": "An electronic signature is created by a person, while an electronic seal is created by a computer.",
+        "right": false
+      },
+      {
+        "body": "An electronic signature and an electronic seal differ in the level of protection of the private key.",
+        "right": true
+      },
+      {
+        "body": "An electronic signature and an electronic seal are technologically identical.",
+        "right": true
+      },
+      {
+        "body": "An electronic signature is created with a private key, while an electronic seal is created with a public key.",
+        "right": false
+      },
+      {
+        "body": "There is no difference between an electronic signature and an electronic reader.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "What is a positive compromise of a statistical database?",
+    "answers": [
+      {
+        "body": "Nonsense.",
+        "right": false
+      },
+      {
+        "body": "The opposite of partial compromise.",
+        "right": true
+      },
+      {
+        "body": "Compromise with traces covered up.",
+        "right": false
+      },
+      {
+        "body": "The opposite of negative compromise.",
+        "right": false
+      },
+      {
+        "body": "The result of a refined query is a non-zero number of answers.",
+        "right": true
+      }
+    ]
+  },
+  {
+    "name": "How does the minimum query size technique work in statistical databases?",
+    "answers": [
+      {
+        "body": "no such technique exists.",
+        "right": false
+      },
+      {
+        "body": "Fewer records than the specified minimum limit may be used to evaluate the query.",
+        "right": false
+      },
+      {
+        "body": "minimum limit, but only under special security measures (e.g., signing a non-disclosure agreement).",
+        "right": false
+      },
+      {
+        "body": "no such technique is used in statistical databases.",
+        "right": false
+      },
+      {
+        "body": "No fewer records than the specified minimum limit may be used to evaluate the query.",
+        "right": true
+      }
+    ]
+  },
+  {
+    "name": "Common security policies include:",
+    "answers": [
+      {
+        "body": "System-specific security policy",
+        "right": true
+      },
+      {
+        "body": "Overall security policy",
+        "right": true
+      },
+      {
+        "body": "Inter-application security policy",
+        "right": false
+      },
+      {
+        "body": "Integrated security policy",
+        "right": false
+      },
+      {
+        "body": "Horizontal security policy",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "Data trustworthiness?",
+    "answers": [
+      {
+        "body": "Concealment of the contained information.",
+        "right": false
+      },
+      {
+        "body": "Data is in an unchanged form as it was created.",
+        "right": true
+      },
+      {
+        "body": "Technically realized, e.g., using a digital signature.",
+        "right": true
+      },
+      {
+        "body": "Data obtained from a trustworthy source.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "Unlinkability (according to Common Criteria) ensures the possibility of repeated use of resources:",
+    "answers": [
+      {
+        "body": "such that the user's identity remains hidden from specific users for specific operations without revealing the user's identity, but if necessary, the identity can be retrospectively determined.",
+        "right": false
+      },
+      {
+        "body": "such that only administrators will see that this use was actually initiated by the same user.",
+        "right": false
+      },
+      {
+        "body": "such that others will not be able to link these uses without revealing the user's identity.",
+        "right": true
+      }
+    ]
+  },
+  {
+    "name": "What are the factors directly influencing the probability of unauthorized (mis)use of information?",
+    "answers": [
+      {
+        "body": "level of security mechanisms.",
+        "right": true
+      },
+      {
+        "body": "Severity of punishment for those who unlawfully manipulate data.",
+        "right": false
+      },
+      {
+        "body": "Severity of punishment for those who guarded the data and ensured restrictive manipulation.",
+        "right": false
+      },
+      {
+        "body": "Severity of punishment for those who failed to guard the data and co-participated in its leakage.",
+        "right": false
+      },
+      {
+        "body": "Data encoding.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "Typical operations on a firewall are",
+    "answers": [
+      {
+        "body": "hash",
+        "right": false
+      },
+      {
+        "body": "translate (NAT)",
+        "right": true
+      },
+      {
+        "body": "change",
+        "right": false
+      },
+      {
+        "body": "deny",
+        "right": true
+      }
+    ]
+  },
+  {
+    "name": "Is it even possible for the external environment (temperature, etc.) to have any influence on the security of chip cards?",
+    "answers": [
+      {
+        "body": "no, it is not possible",
+        "right": false
+      },
+      {
+        "body": "yes, it is possible",
+        "right": true
+      }
+    ]
+  },
+  {
+    "name": "By accountability, we mean",
+    "answers": [
+      {
+        "body": "Users are responsible to the data owner for all their actions in the system.",
+        "right": true
+      },
+      {
+        "body": "Users must authenticate themselves to its owner before using the system.",
+        "right": false
+      },
+      {
+        "body": "For every activity, it can be unequivocally proven who is responsible for it.",
+        "right": false
+      },
+      {
+        "body": "System users are responsible for actions that can be unequivocally proven.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "Unlinkability does not consider the user's identity but",
+    "answers": [
+      {
+        "body": "The range of services and resources currently used in the system.",
+        "right": false
+      },
+      {
+        "body": "Their pseudonymity and untraceability.",
+        "right": false
+      },
+      {
+        "body": "The range of services and resources that were used by one user.",
+        "right": true
+      },
+      {
+        "body": "The range of services and resources that were used by different users.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "To whom do current tokens in payment systems provide the lowest protection?",
+    "answers": [
+      {
+        "body": "Banks",
+        "right": false
+      },
+      {
+        "body": "ATM network operators (if the operator is not the bank itself)",
+        "right": false
+      },
+      {
+        "body": "Merchants",
+        "right": false
+      },
+      {
+        "body": "Customers",
+        "right": true
+      }
+    ]
+  },
+  {
+    "name": "What is a public pseudonym?",
+    "answers": [
+      {
+        "body": "E.g., a phone number in the Yellow Pages.",
+        "right": true
+      },
+      {
+        "body": "A pseudonym used within a non-publicly accessible system.",
+        "right": false
+      },
+      {
+        "body": "It is known to the public for a fee.",
+        "right": false
+      },
+      {
+        "body": "A pseudonym usable only in public.",
+        "right": false
+      },
+      {
+        "body": "It is publicly known from the beginning, e.g., in a list of persons.",
+        "right": true
+      }
+    ]
+  },
+  {
+    "name": "Anonymity (according to Common Criteria) ensures the possibility of using system resources or services such that:",
+    "answers": [
+      {
+        "body": "specified entities are able to determine the real username associated with specified subjects, operations, objects.",
+        "right": false
+      },
+      {
+        "body": "the user's identity remains hidden from specific users for specific operations.",
+        "right": true
+      },
+      {
+        "body": "the user's identity remains hidden, but if necessary, it can be retrospectively determined.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "A firewall is",
+    "answers": [
+      {
+        "body": "an artificial barrier against a potentially dangerous environment.",
+        "right": true
+      },
+      {
+        "body": "software for detecting and blocking suspicious activities in the system.",
+        "right": false
+      },
+      {
+        "body": "reliable protection against misuse of computers on the internal network.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "Unobservability (according to Common Criteria) ensures the possibility of using system resources or services such that:",
+    "answers": [
+      {
+        "body": "other system users cannot observe the use of the given resource or services, but if necessary, this behavior can be retrospectively linked to a specific user.",
+        "right": false
+      },
+      {
+        "body": "users are not responsible for their behavior in the system.",
+        "right": false
+      },
+      {
+        "body": "other users, with the exception of administrators, cannot observe the use of the given resource or services.",
+        "right": false
+      },
+      {
+        "body": "specified entities are unable to observe specified operations performed by specified entities on specified objects.",
+        "right": true
+      },
+      {
+        "body": "other users (including administrators) of the system cannot observe the use of the given resource or services.",
+        "right": true
+      },
+      {
+        "body": "specified entities are able to observe specified operations performed by specified entities on unspecified objects.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "IEEE - Software Engineering Principles state, for example:",
+    "answers": [
+      {
+        "body": "to carry out one's activities in accordance with the public interest.",
+        "right": true
+      },
+      {
+        "body": "to hold only such positions for which one is entitled and capable.",
+        "right": false
+      },
+      {
+        "body": "the obligation to live honestly, healthily, and according to IEEE rules so that society can be proud of them.",
+        "right": false
+      },
+      {
+        "body": "to ensure honesty and independence in one's professional judgments.",
+        "right": true
+      },
+      {
+        "body": "the obligation to use only software for which payment has not been demonstrably made.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "To ensure accountability?",
+    "answers": [
+      {
+        "body": "Data archiving is performed to maintain the ability to manage an account.",
+        "right": false
+      },
+      {
+        "body": "At the beginning of work in the system, authentication or identification is usually performed.",
+        "right": true
+      },
+      {
+        "body": "Data archiving is performed, enabling the linking of activity with a specific person so that the person cannot deny responsibility for their actions.",
+        "right": true
+      },
+      {
+        "body": "At the beginning of work in the system, data decryption for working with the account is usually performed.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "The basic rules of the Bell-LaPadula security model include:",
+    "answers": [
+      {
+        "body": "Processes must not read/write data from/to a lower level.",
+        "right": false
+      },
+      {
+        "body": "Processes must not write data to a lower level (no write-down).",
+        "right": true
+      },
+      {
+        "body": "Processes must not read data at a lower level.",
+        "right": false
+      },
+      {
+        "body": "Processes must not write data to a higher level.",
+        "right": false
+      },
+      {
+        "body": "Processes must not read data at a higher level (no read-up).",
+        "right": true
+      }
+    ]
+  },
+  {
+    "name": "For email messages sent using the Mixminion system, the following applies",
+    "answers": [
+      {
+        "body": "they are anonymous.",
+        "right": true
+      },
+      {
+        "body": "email headers are not modified.",
+        "right": false
+      },
+      {
+        "body": "the user specifies the path through the network.",
+        "right": true
+      },
+      {
+        "body": "replies are delivered in the system differently from normal emails.",
+        "right": false
+      },
+      {
+        "body": "it is possible to reply to them within a certain time frame.",
+        "right": true
+      },
+      {
+        "body": "they are pseudonymous.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "Which technique is not valid for anonymous communication networks:",
+    "answers": [
+      {
+        "body": "using minixes for forwarding messages.",
+        "right": true
+      },
+      {
+        "body": "encrypting messages between nodes with an RSA algorithm with a key length dependent on the number of nodes.",
+        "right": true
+      },
+      {
+        "body": "delaying received messages.",
+        "right": false
+      },
+      {
+        "body": "non-deterministic sending of received messages over time.",
+        "right": false
+      },
+      {
+        "body": "reordering messages within a node.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "By data availability, we mean",
+    "answers": [
+      {
+        "body": "The process of authenticating a person to work with data and services should be accessible even to people with reduced work capacity.",
+        "right": false
+      },
+      {
+        "body": "Users should have access to data and services with as little complication as possible.",
+        "right": false
+      },
+      {
+        "body": "Data should be available even to an unauthorized person in case of a critical event.",
+        "right": false
+      },
+      {
+        "body": "Authorized users should have access to data and services with as little complication as possible.",
+        "right": true
+      }
+    ]
+  },
+  {
+    "name": "The maximum number of identities a single person can have is",
+    "answers": [
+      {
+        "body": "2 for married women.",
+        "right": false
+      },
+      {
+        "body": "as many as they want (if they try hard enough).",
+        "right": true
+      },
+      {
+        "body": "4 for individuals with two marriages and one divorce.",
+        "right": false
+      },
+      {
+        "body": "1.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "In connection with the aggregation of data into large databases, Act No. 101/2000 Coll. on Personal Data Protection imposes",
+    "answers": [
+      {
+        "body": "The obligation not to aggregate data originally obtained for different purposes into a single whole.",
+        "right": true
+      },
+      {
+        "body": "The obligation to inform the data subject that sensitive information about them has been discovered and whether they can confirm its truthfulness.",
+        "right": false
+      },
+      {
+        "body": "The obligation to inform the person whose data will be stored and processed in the database that the provided data will be handled in this way.",
+        "right": true
+      }
+    ]
+  },
+  {
+    "name": "According to the Czech Act on Electronic Signature (227/2000), a qualified electronic signature is:",
+    "answers": [
+      {
+        "body": "An electronic signature that is uniquely linked to the signing person.",
+        "right": true
+      },
+      {
+        "body": "An electronic signature that is performed on guaranteed correct data.",
+        "right": false
+      },
+      {
+        "body": "Nothing of the sort exists according to Czech law.",
+        "right": false
+      },
+      {
+        "body": "An electronic signature that is attached to a message so that it can be guaranteed to be verified.",
+        "right": false
+      }
+    ]
+  },
+  {
+    "name": "Pseudonymity (according to Common Criteria) ensures the possibility of using system resources or services such that:",
+    "answers": [
+      {
+        "body": "the user's identity remains permanently hidden.",
+        "right": false
+      },
+      {
+        "body": "the user's identity remains hidden from specific users for specific operations.",
+        "right": false
+      },
+      {
+        "body": "the user's identity remains hidden, but specified entities under unspecified conditions can reverse this state.",
+        "right": false
+      },
+      {
+        "body": "the user's identity remains hidden, but this only applies to originally non-public pseudonyms.",
+        "right": false
+      },
+      {
+        "body": "the user's identity remains hidden, but specified entities under specified conditions can reverse this state.",
+        "right": true
+      },
+      {
+        "body": "the user's identity remains hidden from other users, but not from administrators.",
+        "right": false
+      }
+    ]
+  }
+];
+      
+      // Initialize with the sample data for now
+      initializeQuestions(questionsData);
+      
+      // Load additional questions from a JSON file (you would replace this URL with your actual file)
+      // $.getJSON('questions.json', function(data) {
+      //   initializeQuestions(data);
+      // }).fail(function() {
+      //   console.error("Could not load questions.json");
+      //   initializeQuestions(questionsData);
+      // });
+      
+      function initializeQuestions(data) {
+        questions = data;
+        shuffleQuestions();
+        updateTotalQuestions();
+        loadQuestion();
+        updateStats();
+        initChart();
+      }
+      
+      function shuffleQuestions() {
+        // Fisher-Yates shuffle algorithm
+        for (let i = questions.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [questions[i], questions[j]] = [questions[j], questions[i]];
+        }
+      }
+      
+      function loadQuestion() {
+        if (questions.length === 0) return;
+        
+        const question = questions[currentQuestionIndex];
+        $("#question-text").text(question.name);
+        $("#current-question").text(currentQuestionIndex + 1);
+        
+        // Clear previous answers
+        $("#answers-container").empty();
+        selectedAnswers = [];
+        
+        // Add answers
+        question.answers.forEach((answer, index) => {
+          const answerHtml = `
+            <div class="answer-option" data-index="${index}">
+              <div class="d-flex">
+                <div class="me-3">
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="answer-${index}">
+                    <label class="form-check-label" for="answer-${index}"></label>
+                  </div>
+                </div>
+                <div>${answer.body}</div>
+              </div>
+            </div>
+          `;
+          $("#answers-container").append(answerHtml);
+        });
+        
+        // Set difficulty badge
+        const questionStats = stats.questions[currentQuestionIndex] || { attempts: 0, correct: 0 };
+        updateDifficultyBadge(questionStats);
+        
+        // Reset feedback text
+        $("#feedback-text").text("");
+        
+        // Set button to "Submit"
+        $("#submit-btn").text("Submit").removeClass("btn-success").addClass("btn-primary");
+        
+        // Handle answer selection
+        $(".answer-option").on("click", function() {
+          const index = $(this).data("index");
+          const checkbox = $(this).find("input[type='checkbox']");
+          
+          // Toggle checkbox
+          checkbox.prop("checked", !checkbox.prop("checked"));
+          
+          // Toggle selection in the array
+          if (selectedAnswers.includes(index)) {
+            selectedAnswers = selectedAnswers.filter(i => i !== index);
+            $(this).removeClass("selected");
+          } else {
+            selectedAnswers.push(index);
+            $(this).addClass("selected");
+          }
+        });
+      }
+      
+      function updateDifficultyBadge(questionStats) {
+        const attempts = questionStats.attempts || 0;
+        const correct = questionStats.correct || 0;
+        const successRate = attempts > 0 ? (correct / attempts * 100) : 0;
+        
+        let difficulty, badgeClass;
+        
+        if (attempts === 0) {
+          difficulty = "New";
+          badgeClass = "bg-primary";
+        } else if (attempts < 3) {
+          difficulty = "Learning";
+          badgeClass = "bg-warning";
+        } else if (successRate < 70) {
+          difficulty = "Hard";
+          badgeClass = "bg-danger";
+        } else {
+          difficulty = "Mastered";
+          badgeClass = "bg-success";
+        }
+        
+        $("#question-difficulty")
+          .text(`Difficulty: ${difficulty}`)
+          .removeClass("bg-primary bg-warning bg-danger bg-success")
+          .addClass(badgeClass);
+      }
+      
+      function updateTotalQuestions() {
+        $("#total-questions").text(questions.length);
+        $("#cards-total").text(questions.length);
+      }
+      
+      // Event handlers
+      $("#submit-btn").on("click", function() {
+        const buttonText = $(this).text();
+        
+        if (buttonText === "Submit") {
+          checkAnswers();
+        } else {
+          nextQuestion();
+        }
+      });
+      
+      $("#reset-btn").on("click", function() {
+        if (confirm("Are you sure you want to reset all progress? This cannot be undone.")) {
+          resetStats();
+          currentQuestionIndex = 0;
+          loadQuestion();
+          updateStats();
+        }
+      });
+      
+      function checkAnswers() {
+        const question = questions[currentQuestionIndex];
+        let allCorrect = true;
+        let correctIndexes = [];
+        
+        // Mark correct/incorrect answers
+        question.answers.forEach((answer, index) => {
+          const isSelected = selectedAnswers.includes(index);
+          const isCorrect = answer.right;
+          const answerElement = $(`.answer-option[data-index="${index}"]`);
+          
+          // Collect correct answers for feedback
+          if (isCorrect) {
+            correctIndexes.push(index);
+          }
+          
+          // Check if user's selection is correct
+          if ((isSelected && !isCorrect) || (!isSelected && isCorrect)) {
+            allCorrect = false;
+          }
+          
+          // Apply styling based on correctness
+          if (isCorrect) {
+            answerElement.addClass("correct");
+          } else if (isSelected) {
+            answerElement.addClass("incorrect");
+          }
+          
+          // Disable further interactions
+          answerElement.off("click");
+        });
+        
+        // Update stats
+        if (!stats.questions[currentQuestionIndex]) {
+          stats.questions[currentQuestionIndex] = { attempts: 0, correct: 0 };
+          stats.cardsSeen += 1;
+        }
+        
+        stats.questions[currentQuestionIndex].attempts += 1;
+        stats.totalAttempts += 1;
+        
+        if (allCorrect) {
+          stats.questions[currentQuestionIndex].correct += 1;
+          stats.totalCorrect += 1;
+          stats.currentStreak += 1;
+          stats.bestStreak = Math.max(stats.bestStreak, stats.currentStreak);
+          $("#feedback-text").html(`<span class="text-success">Correct! Well done!</span>`);
+        } else {
+          stats.currentStreak = 0;
+          
+          // Show what the correct answers were
+          const correctAnswersText = correctIndexes.length > 1 
+            ? `Correct answers were options: ${correctIndexes.map(i => i + 1).join(', ')}`
+            : `Correct answer was option: ${correctIndexes[0] + 1}`;
+          
+          $("#feedback-text").html(`<span class="text-danger">${correctAnswersText}</span>`);
+        }
+        
+        saveStats();
+        updateStats();
+        
+        // Change button to "Next"
+        $("#submit-btn").text("Next").removeClass("btn-primary").addClass("btn-success");
+      }
+      
+      function nextQuestion() {
+        currentQuestionIndex = (currentQuestionIndex + 1) % questions.length;
+        loadQuestion();
+      }
+      
+      function loadStats() {
+        const defaultStats = {
+          cardsSeen: 0,
+          totalAttempts: 0,
+          totalCorrect: 0,
+          currentStreak: 0,
+          bestStreak: 0,
+          questions: {}
+        };
+        
+        const savedStats = localStorage.getItem('pv080DrillStats');
+        return savedStats ? JSON.parse(savedStats) : defaultStats;
+      }
+      
+      function saveStats() {
+        localStorage.setItem('pv080DrillStats', JSON.stringify(stats));
+      }
+      
+      function resetStats() {
+        stats = {
+          cardsSeen: 0,
+          totalAttempts: 0,
+          totalCorrect: 0,
+          currentStreak: 0,
+          bestStreak: 0,
+          questions: {}
+        };
+        saveStats();
+      }
+      
+      function updateStats() {
+        // Update progress
+        const progressPercent = questions.length > 0 
+          ? Math.round((stats.cardsSeen / questions.length) * 100) 
+          : 0;
+        $("#progress-bar").css("width", `${progressPercent}%`);
+        $("#cards-seen").text(stats.cardsSeen);
+        
+        // Update performance stats
+        const correctPercent = stats.totalAttempts > 0 
+          ? Math.round((stats.totalCorrect / stats.totalAttempts) * 100) 
+          : 0;
+        $("#correct-percent").text(`${correctPercent}%`);
+        $("#total-attempts").text(stats.totalAttempts);
+        $("#current-streak").text(stats.currentStreak);
+        
+        // Calculate mastery levels
+        let newCards = 0;
+        let learningCards = 0;
+        let masteredCards = 0;
+        
+        questions.forEach((q, index) => {
+          const qStats = stats.questions[index];
+          if (!qStats || qStats.attempts === 0) {
+            newCards++;
+          } else if (qStats.attempts < 3 || qStats.correct / qStats.attempts < 0.7) {
+            learningCards++;
+          } else {
+            masteredCards++;
+          }
+        });
+        
+        // Update mastery stats
+        $("#mastery-new").text(newCards);
+        $("#mastery-learning").text(learningCards);
+        $("#mastery-mastered").text(masteredCards);
+        
+        const newPercent = questions.length > 0 ? (newCards / questions.length) * 100 : 0;
+        const learningPercent = questions.length > 0 ? (learningCards / questions.length) * 100 : 0;
+        const masteredPercent = questions.length > 0 ? (masteredCards / questions.length) * 100 : 0;
+        
+        $("#mastery-new-bar").css("width", `${newPercent}%`);
+        $("#mastery-learning-bar").css("width", `${learningPercent}%`);
+        $("#mastery-mastered-bar").css("width", `${masteredPercent}%`);
+        
+        // Update chart if available
+        updateChart(newCards, learningCards, masteredCards);
+      }
+      
+      function initChart() {
+        const ctx = document.getElementById('mastery-chart').getContext('2d');
+        
+        chart = new Chart(ctx, {
+          type: 'doughnut',
+          data: {
+            labels: ['New', 'Learning', 'Mastered'],
+            datasets: [{
+              data: [1, 0, 0], // Placeholder data
+              backgroundColor: [
+                '#0dcaf0', // info (blue) for new
+                '#ffc107', // warning (yellow) for learning
+                '#198754'  // success (green) for mastered
+              ],
+              borderWidth: 0
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: 'bottom',
+                labels: {
+                  boxWidth: 12,
+                  padding: 15
+                }
+              }
+            },
+            cutout: '70%'
+          }
+        });
+      }
+      
+      function updateChart(newCards, learningCards, masteredCards) {
+        if (!chart) return;
+        
+        chart.data.datasets[0].data = [newCards, learningCards, masteredCards];
+        chart.update();
+      }
+    });
+  </script>
+</body>
+</html>
